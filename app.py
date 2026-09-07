@@ -227,6 +227,44 @@ def receitas():
     return render_template("receitas.html", minhas=minhas, resultado=resultado)
 
 
+@app.route("/receitas/<page_id>/editar", methods=["GET", "POST"])
+def editar_receita(page_id):
+    receita = db.get_custom_recipe(page_id)
+    if not receita:
+        flash("Não encontrei essa receita.", "error")
+        return redirect(url_for("receitas"))
+
+    resultado = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        ingredientes_raw = request.form.get("ingredientes", "").strip()
+        preparo_raw = request.form.get("preparo", "").strip()
+        ingredientes = [l.strip() for l in ingredientes_raw.splitlines() if l.strip()]
+        preparo = [l.strip() for l in preparo_raw.splitlines() if l.strip()]
+
+        if nome and ingredientes and preparo:
+            total = {"kcal": 0.0, "proteina_g": 0.0, "hidratos_g": 0.0, "gordura_g": 0.0}
+            chave_despensa = []
+            for linha in ingredientes:
+                sub_total, sub_itens = parse_meal_text(linha)
+                total["kcal"] += sub_total["kcal"]
+                total["proteina_g"] += sub_total["proteina_g"]
+                total["hidratos_g"] += sub_total["hidratos_g"]
+                total["gordura_g"] += sub_total["gordura_g"]
+                for it in sub_itens:
+                    if it["encontrado"] and it["alimento_encontrado"] not in chave_despensa:
+                        chave_despensa.append(it["alimento_encontrado"])
+
+            db.update_custom_recipe(page_id, nome, ingredientes, preparo, chave_despensa,
+                                     total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
+            flash("Receita atualizada! ✏️", "success")
+            return redirect(url_for("receitas"))
+        else:
+            flash("Preenche o título, os ingredientes e o preparo.", "error")
+
+    return render_template("editar_receita.html", receita=receita)
+
+
 @app.route("/receitas/remover/<page_id>", methods=["POST"])
 def remover_receita(page_id):
     db.delete_custom_recipe(page_id)

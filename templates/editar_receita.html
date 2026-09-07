@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Editar receita{% endblock %}
+{% block content %}
+<a href="{{ url_for('receitas') }}" style="color:var(--muted); text-decoration:none; font-size:0.9rem;">← Voltar às receitas</a>
+<h1>✏️ Editar receita</h1>
+<p class="subtitle">As calorias são recalculadas automaticamente ao guardar.</p>
+
+<form method="post" class="card">
+  <div class="field">
+    <label>Título da receita</label>
+    <input type="text" name="nome" value="{{ receita.nome }}" required>
+  </div>
+  <div class="field">
+    <label>Ingredientes (um por linha)</label>
+    <textarea name="ingredientes" required style="min-height:110px;">{{ receita.ingredientes|join('\n') }}</textarea>
+  </div>
+  <div class="field">
+    <label>Preparo (um passo por linha)</label>
+    <textarea name="preparo" required style="min-height:110px;">{{ receita.preparo|join('\n') }}</textarea>
+  </div>
+  <button class="btn" type="submit">Guardar alterações</button>
+</form>
+
+<form method="post" action="{{ url_for('remover_receita', page_id=receita.page_id) }}">
+  <button class="btn btn-danger" type="submit">🗑️ Remover esta receita</button>
+</form>
+{% endblock %}

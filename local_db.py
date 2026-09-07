@@ -229,3 +229,26 @@ def delete_custom_recipe(page_id):
     recipes = data.setdefault("custom_recipes", [])
     data["custom_recipes"] = [r for r in recipes if r["page_id"] != page_id]
     _save(data)
+
+
+def get_custom_recipe(page_id):
+    data = _load()
+    for r in data.setdefault("custom_recipes", []):
+        if r["page_id"] == page_id:
+            return r
+    return None
+
+
+def update_custom_recipe(page_id, nome, ingredientes, preparo, chave_despensa, kcal, proteina_g, hidratos_g, gordura_g):
+    data = _load()
+    for r in data.setdefault("custom_recipes", []):
+        if r["page_id"] == page_id:
+            r.update({
+                "nome": nome, "ingredientes": list(ingredientes), "preparo": list(preparo),
+                "chave_despensa": list(chave_despensa),
+                "kcal": round(kcal, 1), "proteina_g": round(proteina_g, 1),
+                "hidratos_g": round(hidratos_g, 1), "gordura_g": round(gordura_g, 1),
+            })
+            _save(data)
+            return r
+    return None

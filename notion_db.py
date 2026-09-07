@@ -368,6 +368,27 @@ def get_custom_recipes():
     return [_receita_from_page(p) for p in results]
 
 
+def get_custom_recipe(page_id):
+    url = f"{BASE_URL}/pages/{page_id}"
+    r = requests.get(url, headers=_headers(), timeout=15)
+    r.raise_for_status()
+    return _receita_from_page(r.json())
+
+
+def update_custom_recipe(page_id, nome, ingredientes, preparo, chave_despensa, kcal, proteina_g, hidratos_g, gordura_g):
+    properties = {
+        "Nome": {"title": [{"text": {"content": nome}}]},
+        "Ingredientes": {"rich_text": [{"text": {"content": "\n".join(ingredientes)[:1900]}}]},
+        "Preparo": {"rich_text": [{"text": {"content": "\n".join(preparo)[:1900]}}]},
+        "Chave Despensa": {"rich_text": [{"text": {"content": ", ".join(chave_despensa)[:1900]}}]},
+        "Kcal": {"number": round(kcal, 1)},
+        "Proteina g": {"number": round(proteina_g, 1)},
+        "Hidratos g": {"number": round(hidratos_g, 1)},
+        "Gordura g": {"number": round(gordura_g, 1)},
+    }
+    return _update_page(page_id, properties)
+
+
 def add_custom_recipe(nome, ingredientes, preparo, chave_despensa, kcal, proteina_g, hidratos_g, gordura_g):
     properties = {
         "Nome": {"title": [{"text": {"content": nome}}]},
