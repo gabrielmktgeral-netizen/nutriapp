@@ -12,7 +12,7 @@ USING_NOTION = bool(os.environ.get("NOTION_TOKEN"))
 if USING_NOTION:
     from notion_db import (  # noqa: F401
         configured, get_profile, save_profile,
-        add_meal, get_meals_between, get_meals_for_day,
+        add_meal, get_meals_between, get_meals_for_day, get_meal, update_meal, delete_meal,
         get_pantry, add_pantry_item, delete_pantry_item,
         get_excluidos, add_excluido, delete_excluido,
         add_weight, get_weight_history,
@@ -23,7 +23,7 @@ if USING_NOTION:
 else:
     from local_db import (  # noqa: F401
         configured, get_profile, save_profile,
-        add_meal, get_meals_between, get_meals_for_day,
+        add_meal, get_meals_between, get_meals_for_day, get_meal, update_meal, delete_meal,
         get_pantry, add_pantry_item, delete_pantry_item,
         get_excluidos, add_excluido, delete_excluido,
         add_weight, get_weight_history,

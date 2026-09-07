@@ -74,6 +74,34 @@ def get_meals_for_day(data_iso):
     return get_meals_between(data_iso, data_iso)
 
 
+def get_meal(page_id):
+    data = _load()
+    for m in data["meals"]:
+        if m["page_id"] == page_id:
+            return m
+    return None
+
+
+def update_meal(page_id, texto_original, kcal, proteina_g, hidratos_g, gordura_g):
+    data = _load()
+    for m in data["meals"]:
+        if m["page_id"] == page_id:
+            m["texto_original"] = texto_original
+            m["kcal"] = round(kcal, 1)
+            m["proteina_g"] = round(proteina_g, 1)
+            m["hidratos_g"] = round(hidratos_g, 1)
+            m["gordura_g"] = round(gordura_g, 1)
+            _save(data)
+            return m
+    return None
+
+
+def delete_meal(page_id):
+    data = _load()
+    data["meals"] = [m for m in data["meals"] if m["page_id"] != page_id]
+    _save(data)
+
+
 # ---------- DESPENSA ----------
 
 def get_pantry():

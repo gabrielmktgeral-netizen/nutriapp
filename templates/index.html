@@ -56,6 +56,7 @@
           {% else %}
             <span class="meal-kcal">{{ meal.kcal|round|int }} kcal</span>
           {% endif %}
+          <a class="btn btn-sm btn-outline" href="{{ url_for('editar_refeicao', page_id=meal.page_id, voltar='index') }}">Editar</a>
         {% else %}
           <a class="btn btn-sm btn-outline" href="{{ url_for('registar_refeicao', tipo=tipo) }}">Registar</a>
           {% if habitos[tipo] %}

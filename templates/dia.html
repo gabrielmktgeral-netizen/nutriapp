@@ -54,6 +54,7 @@
           {% else %}
             <span class="meal-kcal">{{ meal.kcal|round|int }} kcal</span>
           {% endif %}
+          <a class="btn btn-sm btn-outline" href="{{ url_for('editar_refeicao', page_id=meal.page_id, voltar=data_iso) }}">Editar</a>
         {% else %}
           <span class="meal-kcal">sem registo</span>
         {% endif %}

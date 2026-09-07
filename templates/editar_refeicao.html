@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Editar refeição{% endblock %}
+{% block content %}
+<h1>✏️ Editar refeição</h1>
+<p class="subtitle">{{ meal_labels[meal.tipo][0] }} {{ meal_labels[meal.tipo][1] }} — {{ meal.data }}</p>
+
+<form method="post" class="card">
+  <input type="hidden" name="voltar" value="{{ voltar }}">
+  <div class="field">
+    <label>O que comeste?</label>
+    <textarea name="texto" required>{{ meal.texto_original }}</textarea>
+  </div>
+  <button class="btn" type="submit">Guardar alterações</button>
+</form>
+
+<form method="post" action="{{ url_for('remover_refeicao', page_id=meal.page_id) }}">
+  <input type="hidden" name="voltar" value="{{ voltar }}">
+  <button class="btn btn-danger" type="submit">🗑️ Remover esta refeição</button>
+</form>
+{% endblock %}

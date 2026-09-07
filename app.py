@@ -152,6 +152,38 @@ def registar_refeicao():
                             meal_labels=nc.MEAL_LABELS, resultado=resultado)
 
 
+@app.route("/refeicao/<page_id>/editar", methods=["GET", "POST"])
+def editar_refeicao(page_id):
+    voltar = request.values.get("voltar", "")
+    meal = db.get_meal(page_id)
+    if not meal:
+        flash("Não encontrei essa refeição.", "error")
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+        texto = request.form.get("texto", "").strip()
+        if texto:
+            total, itens = parse_meal_text(texto)
+            db.update_meal(page_id, texto, total["kcal"], total["proteina_g"],
+                            total["hidratos_g"], total["gordura_g"])
+            flash("Refeição atualizada! ✏️", "success")
+        if voltar and voltar != "index":
+            return redirect(url_for("dia", data_iso=voltar))
+        return redirect(url_for("index"))
+
+    return render_template("editar_refeicao.html", meal=meal, meal_labels=nc.MEAL_LABELS, voltar=voltar)
+
+
+@app.route("/refeicao/<page_id>/remover", methods=["POST"])
+def remover_refeicao(page_id):
+    voltar = request.form.get("voltar", "")
+    db.delete_meal(page_id)
+    flash("Refeição removida.", "success")
+    if voltar and voltar != "index":
+        return redirect(url_for("dia", data_iso=voltar))
+    return redirect(url_for("index"))
+
+
 @app.route("/nao-comi/<tipo>", methods=["POST"])
 def nao_comi(tipo):
     db.add_meal(date.today().isoformat(), tipo, "Não comi nada", 0, 0, 0, 0)

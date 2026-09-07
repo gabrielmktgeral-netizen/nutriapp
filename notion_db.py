@@ -159,6 +159,38 @@ def add_meal(data_iso, tipo, texto_original, kcal, proteina_g, hidratos_g, gordu
     return _create_page(DS_REFEICOES, properties)
 
 
+def update_meal(page_id, texto_original, kcal, proteina_g, hidratos_g, gordura_g):
+    properties = {
+        "Texto Original": {"rich_text": [{"text": {"content": texto_original[:1900]}}]},
+        "Kcal": {"number": round(kcal, 1)},
+        "Proteina g": {"number": round(proteina_g, 1)},
+        "Hidratos g": {"number": round(hidratos_g, 1)},
+        "Gordura g": {"number": round(gordura_g, 1)},
+    }
+    return _update_page(page_id, properties)
+
+
+def delete_meal(page_id):
+    return _delete_page(page_id)
+
+
+def get_meal(page_id):
+    url = f"{BASE_URL}/pages/{page_id}"
+    r = requests.get(url, headers=_headers(), timeout=15)
+    r.raise_for_status()
+    page = r.json()
+    return {
+        "page_id": page["id"],
+        "data": _prop(page, "Data", "date"),
+        "tipo": _prop(page, "Tipo", "select"),
+        "texto_original": _prop(page, "Texto Original", "text"),
+        "kcal": _prop(page, "Kcal", "number") or 0,
+        "proteina_g": _prop(page, "Proteina g", "number") or 0,
+        "hidratos_g": _prop(page, "Hidratos g", "number") or 0,
+        "gordura_g": _prop(page, "Gordura g", "number") or 0,
+    }
+
+
 def get_meals_between(start_iso, end_iso):
     filter_ = {"and": [
         {"property": "Data", "date": {"on_or_after": start_iso}},
