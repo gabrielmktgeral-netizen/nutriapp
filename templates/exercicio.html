@@ -3,35 +3,62 @@
 {% block content %}
 <h1>🏋️ Exercício</h1>
 
-{% if workout %}
+<div class="two-col" style="margin-bottom:16px;">
+  <a href="{{ url_for('exercicio', modo='diario') }}" class="btn {{ 'btn-outline' if modo!='diario' }}">📅 Plano diário</a>
+  <a href="{{ url_for('exercicio', modo='semanal') }}" class="btn {{ 'btn-outline' if modo!='semanal' }}">🗓️ Plano semanal</a>
+</div>
+
 <div class="assistant-box">
-  <strong>🤖 Sugestão para o teu objetivo</strong>
-  {% if goal_label %}<p style="margin:4px 0 0; font-size:0.9rem;">{{ goal_label }}</p>{% endif %}
+  <strong>🤖 {{ 'Baseado no que comeste hoje' if modo == 'diario' else 'Baseado no que comeste esta semana' }}</strong>
+  {% if goal_label %}<p style="margin:4px 0 0; font-size:0.85rem;">Objetivo: {{ goal_label }}</p>{% endif %}
+  <p style="margin:6px 0 0; font-size:0.9rem;">{{ plano.mensagem }}</p>
 </div>
 
-<div class="card">
-  <h2>{{ workout.titulo }}</h2>
-  <p class="subtitle">⏱️ {{ workout.duracao }}</p>
-  <ul class="item-list">
-    {% for ex in workout.exercicios %}
-      <li>
-        <span>{{ ex }}</span>
-        <a href="{{ ex|youtube_url }}" target="_blank" rel="noopener" class="tag" style="text-decoration:none;">▶️ Ver como fazer</a>
-      </li>
-    {% endfor %}
-  </ul>
-  <p class="subtitle" style="font-size:0.8rem; margin-top:6px;">
-    Os links abrem uma pesquisa no YouTube com a técnica correta de cada exercício.
-  </p>
+{% if modo == 'diario' %}
+  <div class="card">
+    <h2>{{ plano.workout.titulo }}</h2>
+    <p class="subtitle">⏱️ {{ plano.workout.duracao }}</p>
+    <ul class="item-list">
+      {% for ex in plano.workout.exercicios %}
+        <li>
+          <span>{{ ex }}</span>
+          <a href="{{ ex|youtube_url }}" target="_blank" rel="noopener" class="tag" style="text-decoration:none;">▶️ Ver como fazer</a>
+        </li>
+      {% endfor %}
+    </ul>
 
-  <form method="post" style="margin-top:14px;">
-    <input type="hidden" name="nome" value="{{ workout.titulo }}">
-    <input type="hidden" name="duracao_min" value="">
-    <input type="hidden" name="kcal_estimadas" value="">
-    <button class="btn" type="submit">Concluí este treino ✅</button>
-  </form>
-</div>
+    <form method="post" style="margin-top:14px;">
+      <input type="hidden" name="nome" value="{{ plano.workout.titulo }}">
+      <button class="btn" type="submit">Concluí este treino ✅</button>
+    </form>
+  </div>
+{% else %}
+  <div class="card">
+    <h2>A tua semana (Seg-Dom)</h2>
+    <div class="week-grid">
+      {% for label in plano.estrutura %}
+        <div class="week-day {{ 'today' if loop.index0 == today_weekday }}">
+          <div class="d-label">{{ ['SEG','TER','QUA','QUI','SEX','SÁB','DOM'][loop.index0] }}</div>
+          <div class="d-kcal">{{ label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="subtitle" style="font-size:0.8rem; margin-top:10px;">
+      "Descanso" e "leve" também contam — recuperação faz parte do plano, não é preguiça.
+    </p>
+  </div>
 {% endif %}
+
+<div class="card" style="font-size:0.8rem;">
+  <strong>Como decido isto:</strong>
+  <p style="margin:6px 0 0;">
+    Comparo o que registaste (calorias e proteína) com o teu objetivo diário/semanal.
+    Comeste pouco → treino mais leve (menos risco, melhor recuperação).
+    Comeste bem → treino completo ou mais intenso. Isto segue a ideia de
+    "periodização nutricional" usada no desporto: a exigência do treino e a alimentação
+    devem andar equilibradas uma com a outra.
+  </p>
+</div>
 
 <div class="card">
   <h2>Registar outro treino</h2>

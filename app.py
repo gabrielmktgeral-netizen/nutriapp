@@ -9,6 +9,7 @@ from meal_parser import parse_meal_text
 from food_data import lookup as food_lookup
 from recipes import sugerir_receitas
 from workouts import get_workout_for_goal, youtube_search_url
+from exercise_planner import plano_diario, plano_semanal
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-troca-isto")
@@ -220,13 +221,40 @@ def exercicio():
             flash("Treino registado! 💪", "success")
         return redirect(url_for("exercicio"))
 
-    workout = get_workout_for_goal(profile.get("objetivo")) if profile else None
     goal_label = nc.GOAL_LABELS.get(profile.get("objetivo"), "") if profile else ""
+    objetivo = profile.get("objetivo") if profile else None
+    targets = nc.macro_targets(profile) if profile else None
+
+    modo = request.args.get("modo", "diario")
 
     today = date.today()
     monday, sunday = week_bounds(today)
     week_ex = db.get_exercise_between(monday.isoformat(), sunday.isoformat()) if db.configured() else []
-    return render_template("exercicio.html", week_ex=week_ex, workout=workout, goal_label=goal_label)
+
+    plano = None
+    if modo == "semanal":
+        week_meals = db.get_meals_between(monday.isoformat(), sunday.isoformat())
+        dias_totais = []
+        for i in range(7):
+            d_iso = (monday + timedelta(days=i)).isoformat()
+            day_meals = [m for m in week_meals if m["data"] == d_iso]
+            dias_totais.append({
+                "kcal": sum(m["kcal"] for m in day_meals),
+                "proteina_g": sum(m["proteina_g"] for m in day_meals),
+            })
+        plano = plano_semanal(objetivo, dias_totais, targets)
+    else:
+        modo = "diario"
+        today_iso = today.isoformat()
+        meals_today = db.get_meals_for_day(today_iso)
+        totals = {
+            "kcal": sum(m["kcal"] for m in meals_today),
+            "proteina_g": sum(m["proteina_g"] for m in meals_today),
+        }
+        plano = plano_diario(objetivo, totals, targets)
+
+    return render_template("exercicio.html", week_ex=week_ex, goal_label=goal_label, modo=modo, plano=plano,
+                            today_weekday=today.weekday())
 
 
 if __name__ == "__main__":
