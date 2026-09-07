@@ -40,7 +40,7 @@ def _minutos_desde(hora_str, agora):
 def _enviar_a_todos(titulo, corpo, url="/"):
     subs = db.get_push_subscriptions()
     for s in subs:
-        ok = send_notification({"endpoint": s["endpoint"], "keys": s["keys"]}, titulo, corpo, url)
+        ok, _detalhe = send_notification({"endpoint": s["endpoint"], "keys": s["keys"]}, titulo, corpo, url)
         if not ok:
             db.delete_push_subscription(s["endpoint"])
     return len(subs)

@@ -64,9 +64,9 @@ def get_public_key():
 
 
 def send_notification(subscription_info, title, body, url="/"):
-    """Envia uma notificação. Devolve False se a subscrição já não é válida
-    (expirou ou o utilizador desativou no navegador) — nesse caso deve ser
-    removida da base de dados."""
+    """Envia uma notificação. Devolve (True/False, detalhe).
+    False = subscrição já não é válida (expirou/desativada) e deve ser removida.
+    True = considerado enviado (ou erro temporário, mantém-se a subscrição)."""
     priv, _ = _load_keys()
     try:
         webpush(
@@ -75,12 +75,16 @@ def send_notification(subscription_info, title, body, url="/"):
             vapid_private_key=priv,
             vapid_claims={"sub": VAPID_SUB},
         )
-        return True
+        print(f"[push] enviado com sucesso para endpoint terminado em ...{subscription_info.get('endpoint', '')[-12:]}", flush=True)
+        return True, "ok"
     except WebPushException as ex:
         status = getattr(ex.response, "status_code", None)
+        body_txt = getattr(ex.response, "text", "")
+        print(f"[push] WebPushException status={status} body={body_txt}", flush=True)
         if status in (404, 410):
-            return False
-        return True
-    except Exception:
+            return False, f"subscrição inválida (status {status})"
+        return True, f"erro {status}: {body_txt}"
+    except Exception as ex:
+        print(f"[push] Exception ao enviar: {ex!r}", flush=True)
         # erro de rede ou outro problema temporário — não remove a subscrição
-        return True
+        return True, f"erro: {ex}"

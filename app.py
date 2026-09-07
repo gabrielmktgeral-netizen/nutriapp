@@ -224,18 +224,27 @@ def notificacoes_cancelar():
 @app.route("/notificacoes/teste", methods=["POST"])
 def notificacoes_teste():
     subs = db.get_push_subscriptions()
-    enviados = 0
-    for s in subs:
-        ok = push.send_notification({"endpoint": s["endpoint"], "keys": s["keys"]},
-                                      "🥗 NutriApp", "Notificações a funcionar! 🎉", "/")
-        if ok:
-            enviados += 1
-        else:
-            db.delete_push_subscription(s["endpoint"])
-    if enviados:
-        flash(f"Notificação de teste enviada ({enviados}). Devias recebê-la em segundos.", "success")
-    else:
+    if not subs:
         flash("Ainda não há nenhum dispositivo a receber notificações. Ativa primeiro.", "error")
+        return redirect(url_for("notificacoes"))
+
+    enviados_ok = 0
+    erros = []
+    for s in subs:
+        ok, detalhe = push.send_notification({"endpoint": s["endpoint"], "keys": s["keys"]},
+                                               "🥗 NutriApp", "Notificações a funcionar! 🎉", "/")
+        if not ok:
+            db.delete_push_subscription(s["endpoint"])
+            erros.append(detalhe)
+        elif detalhe == "ok":
+            enviados_ok += 1
+        else:
+            erros.append(detalhe)
+
+    if enviados_ok:
+        flash(f"Notificação de teste enviada ({enviados_ok}). Devias recebê-la em segundos.", "success")
+    if erros:
+        flash("Alguns envios falharam: " + " | ".join(erros[:3]), "error")
     return redirect(url_for("notificacoes"))
 
 
