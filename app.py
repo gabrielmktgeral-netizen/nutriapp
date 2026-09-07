@@ -191,6 +191,49 @@ def nao_comi(tipo):
     return redirect(url_for("index"))
 
 
+@app.route("/receitas", methods=["GET", "POST"])
+def receitas():
+    resultado = None
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        ingredientes_raw = request.form.get("ingredientes", "").strip()
+        preparo_raw = request.form.get("preparo", "").strip()
+        ingredientes = [l.strip() for l in ingredientes_raw.splitlines() if l.strip()]
+        preparo = [l.strip() for l in preparo_raw.splitlines() if l.strip()]
+
+        if nome and ingredientes and preparo:
+            total = {"kcal": 0.0, "proteina_g": 0.0, "hidratos_g": 0.0, "gordura_g": 0.0}
+            itens = []
+            chave_despensa = []
+            for linha in ingredientes:
+                sub_total, sub_itens = parse_meal_text(linha)
+                total["kcal"] += sub_total["kcal"]
+                total["proteina_g"] += sub_total["proteina_g"]
+                total["hidratos_g"] += sub_total["hidratos_g"]
+                total["gordura_g"] += sub_total["gordura_g"]
+                itens.extend(sub_itens)
+                for it in sub_itens:
+                    if it["encontrado"] and it["alimento_encontrado"] not in chave_despensa:
+                        chave_despensa.append(it["alimento_encontrado"])
+
+            db.add_custom_recipe(nome, ingredientes, preparo, chave_despensa,
+                                  total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
+            resultado = {"total": total, "itens": itens}
+            flash("Receita guardada! 📖 Já entra nas sugestões.", "success")
+        else:
+            flash("Preenche o título, os ingredientes e o preparo.", "error")
+
+    minhas = db.get_custom_recipes() if db.configured() else []
+    return render_template("receitas.html", minhas=minhas, resultado=resultado)
+
+
+@app.route("/receitas/remover/<page_id>", methods=["POST"])
+def remover_receita(page_id):
+    db.delete_custom_recipe(page_id)
+    flash("Receita removida.", "success")
+    return redirect(url_for("receitas"))
+
+
 @app.route("/sw.js")
 def service_worker():
     # servido na raiz (não em /static/) para o scope do service worker cobrir o site todo
@@ -359,8 +402,10 @@ def sugestao():
     excluidos = db.get_excluidos()
     excluidos_nomes = [e["nome"] for e in excluidos]
 
+    minhas_receitas = db.get_custom_recipes()
     receitas_prontas, receitas_quase = sugerir_receitas(
-        pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=excluidos_nomes, top_n=6)
+        pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=excluidos_nomes, top_n=6,
+        receitas_extra=minhas_receitas)
 
     return render_template("sugestao.html", restante_kcal=restante_kcal, restante_prot=restante_prot,
                             receitas_prontas=receitas_prontas, receitas_quase=receitas_quase,

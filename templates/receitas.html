@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}As tuas receitas{% endblock %}
+{% block content %}
+<a href="{{ url_for('onboarding') }}" style="color:var(--muted); text-decoration:none; font-size:0.9rem;">← Voltar ao perfil</a>
+<h1>📖 As tuas receitas</h1>
+<p class="subtitle">Cria as tuas próprias receitas. As calorias e macros são calculadas automaticamente a partir dos ingredientes — tal como quando registas uma refeição.</p>
+
+<div class="card" style="font-size:0.85rem;">
+  <strong>Como funciona:</strong>
+  <ul style="padding-left:18px; margin:8px 0 0;">
+    <li>Escreve um ingrediente por linha, com quantidade (ex: "200g de frango grelhado").</li>
+    <li>Sem quantidade, assumo 100g por omissão — tal como no registo de refeições.</li>
+    <li>A receita entra automaticamente nas sugestões ("O que posso comer agora?") se tiveres os ingredientes na despensa.</li>
+  </ul>
+</div>
+
+<form method="post" class="card">
+  <div class="field">
+    <label>Título da receita</label>
+    <input type="text" name="nome" placeholder="ex: Frango com arroz e legumes" required>
+  </div>
+  <div class="field">
+    <label>Ingredientes (um por linha)</label>
+    <textarea name="ingredientes" placeholder="200g de frango grelhado&#10;100g de arroz&#10;1 cenoura" required style="min-height:110px;"></textarea>
+  </div>
+  <div class="field">
+    <label>Preparo (um passo por linha)</label>
+    <textarea name="preparo" placeholder="Tempera o frango e grelha 6 min de cada lado.&#10;Coze o arroz em água com sal.&#10;Serve tudo junto." required style="min-height:110px;"></textarea>
+  </div>
+  <button class="btn" type="submit">Calcular e guardar receita</button>
+</form>
+
+{% if resultado %}
+<div class="card">
+  <h2>Calorias calculadas</h2>
+  <div class="macro-grid">
+    <div class="macro-box"><div class="value">🔥 {{ resultado.total.kcal|round|int }}</div><div class="label">kcal</div></div>
+    <div class="macro-box"><div class="value">🥩 {{ resultado.total.proteina_g|round|int }}g</div><div class="label">proteína</div></div>
+    <div class="macro-box"><div class="value">🍚 {{ resultado.total.hidratos_g|round|int }}g</div><div class="label">hidratos</div></div>
+    <div class="macro-box"><div class="value">🥑 {{ resultado.total.gordura_g|round|int }}g</div><div class="label">gordura</div></div>
+  </div>
+  {% if resultado.itens|selectattr('encontrado', 'equalto', false)|list %}
+    <p class="subtitle" style="font-size:0.85rem; margin-top:14px;">⚠️ Alguns ingredientes não foram reconhecidos e não entraram nos totais.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>As tuas receitas guardadas ({{ minhas|length }})</h2>
+  {% if minhas %}
+    <ul class="item-list">
+      {% for r in minhas %}
+        <li>
+          <span>{{ r.nome }} <span class="tag">{{ r.kcal|round|int }} kcal</span></span>
+          <form method="post" action="{{ url_for('remover_receita', page_id=r.page_id) }}">
+            <button class="btn btn-sm btn-danger" type="submit">Remover</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="subtitle">Ainda não criaste nenhuma receita.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -504,17 +504,18 @@ RECIPES = [
 ]
 
 
-def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=None, top_n=6):
+def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=None, top_n=6, receitas_extra=None):
     """Classifica as receitas em duas categorias:
     - 'prontas': tens TODOS os ingredientes-chave em casa.
     - 'quase': falta-te exatamente 1 ingrediente-chave.
     Todas as outras (falta 2+) não aparecem — só sugerimos o que faz sentido já ou quase.
-    Receitas com um alimento excluído são descartadas por completo."""
+    Receitas com um alimento excluído são descartadas por completo.
+    receitas_extra: receitas criadas pelo próprio utilizador (mesmo formato), incluídas na mistura."""
     pantry_lower = [p.lower() for p in pantry_nomes]
     excluidos_lower = [e.lower() for e in (excluidos_nomes or [])]
 
     prontas, quase = [], []
-    for r in RECIPES:
+    for r in RECIPES + list(receitas_extra or []):
         tem_excluido = any(
             any(exc in chave or chave in exc for chave in r["chave_despensa"])
             for exc in excluidos_lower
