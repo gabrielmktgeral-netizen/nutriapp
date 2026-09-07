@@ -516,15 +516,17 @@ def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, excluidos_nomes
 
     prontas, quase = [], []
     for r in RECIPES + list(receitas_extra or []):
+        chaves = [c.lower() for c in r["chave_despensa"]]
+
         tem_excluido = any(
-            any(exc in chave or chave in exc for chave in r["chave_despensa"])
+            any(exc in chave or chave in exc for chave in chaves)
             for exc in excluidos_lower
         )
         if tem_excluido:
             continue
 
-        tem = [chave for chave in r["chave_despensa"] if any(chave in p or p in chave for p in pantry_lower)]
-        falta = [chave for chave in r["chave_despensa"] if chave not in tem]
+        tem = [chave for chave in chaves if any(chave in p or p in chave for p in pantry_lower)]
+        falta = [chave for chave in chaves if chave not in tem]
         match_count = len(tem)
         total_chaves = len(r["chave_despensa"])
 

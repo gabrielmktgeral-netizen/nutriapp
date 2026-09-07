@@ -213,8 +213,8 @@ def receitas():
                 total["gordura_g"] += sub_total["gordura_g"]
                 itens.extend(sub_itens)
                 for it in sub_itens:
-                    if it["encontrado"] and it["alimento_encontrado"] not in chave_despensa:
-                        chave_despensa.append(it["alimento_encontrado"])
+                    if it["encontrado"] and it["alimento_encontrado"].lower() not in chave_despensa:
+                        chave_despensa.append(it["alimento_encontrado"].lower())
 
             db.add_custom_recipe(nome, ingredientes, preparo, chave_despensa,
                                   total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
@@ -252,8 +252,8 @@ def editar_receita(page_id):
                 total["hidratos_g"] += sub_total["hidratos_g"]
                 total["gordura_g"] += sub_total["gordura_g"]
                 for it in sub_itens:
-                    if it["encontrado"] and it["alimento_encontrado"] not in chave_despensa:
-                        chave_despensa.append(it["alimento_encontrado"])
+                    if it["encontrado"] and it["alimento_encontrado"].lower() not in chave_despensa:
+                        chave_despensa.append(it["alimento_encontrado"].lower())
 
             db.update_custom_recipe(page_id, nome, ingredientes, preparo, chave_despensa,
                                      total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
