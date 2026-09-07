@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
@@ -48,13 +49,28 @@ def inject_globals():
 
 @app.route("/")
 def index():
-    profile = db.get_profile() if db.configured() else None
+    today = date.today()
+    today_iso = today.isoformat()
+    monday, sunday = week_bounds(today)
+
+    if db.configured():
+        # Perfil e refeições da semana são independentes — corremos os dois
+        # pedidos ao mesmo tempo em vez de um a seguir ao outro.
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f_profile = ex.submit(db.get_profile)
+            f_week = ex.submit(db.get_meals_between, monday.isoformat(), sunday.isoformat())
+            profile = f_profile.result()
+            week_meals = f_week.result()
+    else:
+        profile = None
+        week_meals = []
+
     if not profile or not profile.get("idade"):
         return redirect(url_for("onboarding"))
 
-    today = date.today()
-    today_iso = today.isoformat()
-    meals_today = db.get_meals_for_day(today_iso)
+    # Um único pedido à base de dados cobre a semana toda (incluindo hoje) —
+    # evita repetir o mesmo pedido duas vezes, o que torna a página mais rápida.
+    meals_today = [m for m in week_meals if m["data"] == today_iso]
 
     totals = {"kcal": 0, "proteina_g": 0, "hidratos_g": 0, "gordura_g": 0}
     for m in meals_today:
@@ -69,8 +85,6 @@ def index():
     for m in meals_today:
         meals_by_type[m["tipo"]] = m
 
-    monday, sunday = week_bounds(today)
-    week_meals = db.get_meals_between(monday.isoformat(), sunday.isoformat())
     week_summary = []
     for i in range(7):
         d = monday + timedelta(days=i)
@@ -468,22 +482,31 @@ def sugestao():
                 flash(f"'{nome}' adicionado à despensa.", "success")
         return redirect(url_for("sugestao"))
 
-    profile = db.get_profile()
-    targets = nc.macro_targets(profile) if profile else None
     today_iso = date.today().isoformat()
-    meals_today = db.get_meals_for_day(today_iso)
+    # Estes 5 pedidos são independentes entre si — corremos em paralelo em vez
+    # de um a seguir ao outro, para a página carregar mais depressa.
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        f_profile = ex.submit(db.get_profile)
+        f_meals = ex.submit(db.get_meals_for_day, today_iso)
+        f_pantry = ex.submit(db.get_pantry)
+        f_excluidos = ex.submit(db.get_excluidos)
+        f_receitas = ex.submit(db.get_custom_recipes)
+        profile = f_profile.result()
+        meals_today = f_meals.result()
+        pantry = f_pantry.result()
+        excluidos = f_excluidos.result()
+        minhas_receitas = f_receitas.result()
+
+    targets = nc.macro_targets(profile) if profile else None
     consumido_kcal = sum(m["kcal"] for m in meals_today)
     consumido_prot = sum(m["proteina_g"] for m in meals_today)
 
     restante_kcal = round((targets["kcal"] if targets else 0) - consumido_kcal)
     restante_prot = round((targets["protein_g"] if targets else 0) - consumido_prot)
 
-    pantry = db.get_pantry()
     pantry_nomes = [p["nome"] for p in pantry]
-    excluidos = db.get_excluidos()
     excluidos_nomes = [e["nome"] for e in excluidos]
 
-    minhas_receitas = db.get_custom_recipes()
     receitas_prontas, receitas_quase = sugerir_receitas(
         pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=excluidos_nomes, top_n=6,
         receitas_extra=minhas_receitas)
@@ -522,14 +545,31 @@ def exercicio():
     targets = nc.macro_targets(profile) if profile else None
 
     modo = request.args.get("modo", "diario")
+    if modo != "semanal":
+        modo = "diario"
 
     today = date.today()
     monday, sunday = week_bounds(today)
-    week_ex = db.get_exercise_between(monday.isoformat(), sunday.isoformat()) if db.configured() else []
+
+    if db.configured():
+        # Estes 3 pedidos são independentes entre si — corremos em paralelo
+        # em vez de um a seguir ao outro, para a página carregar mais depressa.
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            f_week_ex = ex.submit(db.get_exercise_between, monday.isoformat(), sunday.isoformat())
+            if modo == "semanal":
+                f_meals = ex.submit(db.get_meals_between, monday.isoformat(), sunday.isoformat())
+            else:
+                f_meals = ex.submit(db.get_meals_for_day, today.isoformat())
+            f_active = ex.submit(db.get_active_exercise)
+            week_ex = f_week_ex.result()
+            meals_result = f_meals.result()
+            active_exercise = f_active.result()
+    else:
+        week_ex, meals_result, active_exercise = [], [], None
 
     plano = None
     if modo == "semanal":
-        week_meals = db.get_meals_between(monday.isoformat(), sunday.isoformat())
+        week_meals = meals_result
         dias_totais = []
         for i in range(7):
             d_iso = (monday + timedelta(days=i)).isoformat()
@@ -540,16 +580,12 @@ def exercicio():
             })
         plano = plano_semanal(objetivo, dias_totais, targets)
     else:
-        modo = "diario"
-        today_iso = today.isoformat()
-        meals_today = db.get_meals_for_day(today_iso)
+        meals_today = meals_result
         totals = {
             "kcal": sum(m["kcal"] for m in meals_today),
             "proteina_g": sum(m["proteina_g"] for m in meals_today),
         }
         plano = plano_diario(objetivo, totals, targets, weekday=today.weekday())
-
-    active_exercise = db.get_active_exercise() if db.configured() else None
 
     return render_template("exercicio.html", week_ex=week_ex, goal_label=goal_label, modo=modo, plano=plano,
                             today_weekday=today.weekday(), active_exercise=active_exercise)

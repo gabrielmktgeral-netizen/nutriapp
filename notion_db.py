@@ -1,8 +1,33 @@
 """Camada de acesso à base de dados Notion (usada como 'BD' da app)."""
 import json
 import os
+import time
 from datetime import date, datetime
 import requests
+
+# ---------- CACHE CURTO (deixa a navegação entre páginas mais rápida) ----------
+# O Notion é uma API remota — cada pedido demora sempre algum tempo. Dados que
+# mudam pouco (perfil, despensa, excluídos, receitas) ficam em cache por alguns
+# segundos, para não repetir o mesmo pedido ao Notion sempre que mudas de página.
+# Qualquer alteração (guardar perfil, adicionar à despensa, etc.) limpa o cache
+# logo a seguir, para nunca mostrar dados desatualizados depois de guardares algo.
+_CACHE_TTL = 20  # segundos
+_cache = {}
+
+
+def _cache_get(key):
+    entry = _cache.get(key)
+    if entry and (time.monotonic() - entry[0]) < _CACHE_TTL:
+        return entry[1]
+    return None
+
+
+def _cache_set(key, value):
+    _cache[key] = (time.monotonic(), value)
+
+
+def _cache_clear(key):
+    _cache.pop(key, None)
 
 NOTION_TOKEN = os.environ.get("NOTION_TOKEN", "")
 NOTION_VERSION = "2025-09-03"
@@ -91,11 +116,14 @@ def _prop(page, name, kind):
 # ---------- PERFIL ----------
 
 def get_profile():
+    cached = _cache_get("profile")
+    if cached is not None:
+        return cached
     results = _query(DS_PERFIL)
     if not results:
         return None
     page = results[0]
-    return {
+    perfil = {
         "page_id": page["id"],
         "idade": _prop(page, "Idade", "number"),
         "sexo": _prop(page, "Sexo", "select"),
@@ -118,6 +146,8 @@ def get_profile():
         "pular_lembrete_lanche": _prop(page, "Pular Lembrete Lanche", "checkbox"),
         "pular_lembrete_jantar": _prop(page, "Pular Lembrete Jantar", "checkbox"),
     }
+    _cache_set("profile", perfil)
+    return perfil
 
 
 def save_profile(data: dict):
@@ -147,6 +177,7 @@ def save_profile(data: dict):
     properties = {k: v for k, v in properties.items() if v is not None}
 
     existing = get_profile()
+    _cache_clear("profile")
     if existing:
         return _update_page(existing["page_id"], properties)
     return _create_page(DS_PERFIL, properties)
@@ -229,12 +260,17 @@ def get_meals_for_day(data_iso):
 # ---------- DESPENSA ----------
 
 def get_pantry():
+    cached = _cache_get("pantry")
+    if cached is not None:
+        return cached
     results = _query(DS_DESPENSA)
-    return [{
+    itens = [{
         "page_id": p["id"],
         "nome": _prop(p, "Nome", "title"),
         "quantidade": _prop(p, "Quantidade", "text"),
     } for p in results]
+    _cache_set("pantry", itens)
+    return itens
 
 
 def add_pantry_item(nome, quantidade=""):
@@ -242,26 +278,35 @@ def add_pantry_item(nome, quantidade=""):
         "Nome": {"title": [{"text": {"content": nome}}]},
         "Quantidade": {"rich_text": [{"text": {"content": quantidade}}]},
     }
+    _cache_clear("pantry")
     return _create_page(DS_DESPENSA, properties)
 
 
 def delete_pantry_item(page_id):
+    _cache_clear("pantry")
     return _delete_page(page_id)
 
 
 # ---------- EXCLUÍDOS (alimentos que o utilizador não quer nas sugestões) ----------
 
 def get_excluidos():
+    cached = _cache_get("excluidos")
+    if cached is not None:
+        return cached
     results = _query(DS_EXCLUIDOS)
-    return [{"page_id": p["id"], "nome": _prop(p, "Nome", "title")} for p in results]
+    itens = [{"page_id": p["id"], "nome": _prop(p, "Nome", "title")} for p in results]
+    _cache_set("excluidos", itens)
+    return itens
 
 
 def add_excluido(nome):
     properties = {"Nome": {"title": [{"text": {"content": nome}}]}}
+    _cache_clear("excluidos")
     return _create_page(DS_EXCLUIDOS, properties)
 
 
 def delete_excluido(page_id):
+    _cache_clear("excluidos")
     return _delete_page(page_id)
 
 
@@ -428,8 +473,13 @@ def _receita_from_page(p):
 
 
 def get_custom_recipes():
+    cached = _cache_get("custom_recipes")
+    if cached is not None:
+        return cached
     results = _query(DS_RECEITAS_CUSTOM)
-    return [_receita_from_page(p) for p in results]
+    receitas = [_receita_from_page(p) for p in results]
+    _cache_set("custom_recipes", receitas)
+    return receitas
 
 
 def get_custom_recipe(page_id):
@@ -450,6 +500,7 @@ def update_custom_recipe(page_id, nome, ingredientes, preparo, chave_despensa, k
         "Hidratos g": {"number": round(hidratos_g, 1)},
         "Gordura g": {"number": round(gordura_g, 1)},
     }
+    _cache_clear("custom_recipes")
     return _update_page(page_id, properties)
 
 
@@ -464,8 +515,10 @@ def add_custom_recipe(nome, ingredientes, preparo, chave_despensa, kcal, protein
         "Hidratos g": {"number": round(hidratos_g, 1)},
         "Gordura g": {"number": round(gordura_g, 1)},
     }
+    _cache_clear("custom_recipes")
     return _create_page(DS_RECEITAS_CUSTOM, properties)
 
 
 def delete_custom_recipe(page_id):
+    _cache_clear("custom_recipes")
     return _delete_page(page_id)
