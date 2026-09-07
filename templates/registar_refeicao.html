@@ -24,6 +24,21 @@
   <button type="submit" class="btn btn-secondary">Não comi nada nesta refeição</button>
 </form>
 
+{% if receitas_sugeridas %}
+<form method="post" action="{{ url_for('registar_refeicao_receita') }}" class="card" style="margin-top:14px;">
+  <div class="field">
+    <label>Ou escolhe uma receita sugerida</label>
+    <select name="nome_receita">
+      {% for nome in receitas_sugeridas %}
+        <option value="{{ nome }}">{{ nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <input type="hidden" name="tipo" value="{{ tipo_padrao }}">
+  <button type="submit" class="btn btn-outline">Registar esta receita</button>
+</form>
+{% endif %}
+
 {% if resultado %}
 <div class="card">
   <h2>Resultado</h2>

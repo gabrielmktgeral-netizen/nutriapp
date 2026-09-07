@@ -47,5 +47,46 @@
       });
     }
   </script>
+
+  <script>
+    // Deslizar (swipe) para navegar entre os separadores do menu:
+    // deslizar para a direita -> vai para o menu à direita; para a esquerda -> menu à esquerda.
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll(".nav-links a"));
+      if (links.length < 2) return;
+      var hrefs = links.map(function (a) { return a.getAttribute("href"); });
+      var activeIndex = links.findIndex(function (a) { return a.classList.contains("active"); });
+      if (activeIndex === -1) return;
+
+      var startX = null, startY = null, startTarget = null;
+
+      document.addEventListener("touchstart", function (e) {
+        if (e.touches.length !== 1) return;
+        startTarget = e.target;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+
+      document.addEventListener("touchend", function (e) {
+        if (startX === null) return;
+        var tag = startTarget && startTarget.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+          startX = null; startY = null; return;
+        }
+        var endX = e.changedTouches[0].clientX;
+        var endY = e.changedTouches[0].clientY;
+        var dx = endX - startX;
+        var dy = endY - startY;
+        startX = null; startY = null;
+
+        var MIN_DIST = 70;
+        if (Math.abs(dx) < MIN_DIST || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+
+        var targetIndex = dx > 0 ? activeIndex + 1 : activeIndex - 1;
+        if (targetIndex < 0 || targetIndex >= hrefs.length) return;
+        window.location.href = hrefs[targetIndex];
+      }, { passive: true });
+    })();
+  </script>
 </body>
 </html>

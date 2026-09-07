@@ -504,6 +504,15 @@ RECIPES = [
 ]
 
 
+def find_recipe_by_name(nome, receitas_extra=None):
+    """Procura uma receita pelo nome exato (nas fixas ou nas do utilizador)."""
+    receitas_extra = list(receitas_extra or [])
+    for r in RECIPES + receitas_extra:
+        if r["nome"] == nome:
+            return r
+    return None
+
+
 def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=None, top_n=6, receitas_extra=None):
     """Classifica as receitas em duas categorias:
     - 'prontas': tens TODOS os ingredientes-chave em casa.

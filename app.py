@@ -7,7 +7,7 @@ import data_store as db
 import nutrition_calc as nc
 from meal_parser import parse_meal_text
 from food_data import lookup as food_lookup
-from recipes import sugerir_receitas
+from recipes import sugerir_receitas, find_recipe_by_name
 from workouts import get_workout_for_goal, youtube_search_url
 from exercise_planner import plano_diario, plano_semanal
 import push
@@ -152,8 +152,47 @@ def registar_refeicao():
             flash("Refeição registada! ✅", "success")
         tipo_padrao = tipo
 
+    receitas_sugeridas = []
+    if db.configured():
+        profile = db.get_profile()
+        targets = nc.macro_targets(profile) if profile else None
+        today_iso = date.today().isoformat()
+        meals_today = db.get_meals_for_day(today_iso)
+        consumido_kcal = sum(m["kcal"] for m in meals_today)
+        consumido_prot = sum(m["proteina_g"] for m in meals_today)
+        restante_kcal = round((targets["kcal"] if targets else 0) - consumido_kcal)
+        restante_prot = round((targets["protein_g"] if targets else 0) - consumido_prot)
+        pantry_nomes = [p["nome"] for p in db.get_pantry()]
+        excluidos_nomes = [e["nome"] for e in db.get_excluidos()]
+        minhas_receitas = db.get_custom_recipes()
+        prontas, _quase = sugerir_receitas(pantry_nomes, restante_kcal, restante_prot,
+                                            excluidos_nomes=excluidos_nomes, top_n=10,
+                                            receitas_extra=minhas_receitas)
+        receitas_sugeridas = [it["receita"]["nome"] for it in prontas]
+
     return render_template("registar_refeicao.html", tipo_padrao=tipo_padrao,
-                            meal_labels=nc.MEAL_LABELS, resultado=resultado)
+                            meal_labels=nc.MEAL_LABELS, resultado=resultado,
+                            receitas_sugeridas=receitas_sugeridas)
+
+
+@app.route("/registar-refeicao/receita", methods=["POST"])
+def registar_refeicao_receita():
+    tipo = request.form.get("tipo", "almoco")
+    nome_receita = request.form.get("nome_receita", "").strip()
+    if not nome_receita:
+        flash("Escolhe uma receita da lista.", "error")
+        return redirect(url_for("registar_refeicao", tipo=tipo))
+
+    minhas_receitas = db.get_custom_recipes() if db.configured() else []
+    receita = find_recipe_by_name(nome_receita, receitas_extra=minhas_receitas)
+    if not receita:
+        flash("Não encontrei essa receita.", "error")
+        return redirect(url_for("registar_refeicao", tipo=tipo))
+
+    db.add_meal(date.today().isoformat(), tipo, receita["nome"],
+                receita["kcal"], receita["proteina_g"], receita["hidratos_g"], receita["gordura_g"])
+    flash(f"'{receita['nome']}' registada! ✅", "success")
+    return redirect(url_for("index"))
 
 
 @app.route("/refeicao/<page_id>/editar", methods=["GET", "POST"])
