@@ -103,6 +103,10 @@ def get_profile():
         "hora_lanche": _prop(page, "Hora Lanche", "text") or "17:00",
         "hora_jantar": _prop(page, "Hora Jantar", "text") or "20:00",
         "hora_treino": _prop(page, "Hora Treino", "text") or "",
+        "habito_pequeno_almoco": _prop(page, "Habitual Pequeno Almoco", "text") or "",
+        "habito_almoco": _prop(page, "Habitual Almoco", "text") or "",
+        "habito_lanche": _prop(page, "Habitual Lanche", "text") or "",
+        "habito_jantar": _prop(page, "Habitual Jantar", "text") or "",
     }
 
 
@@ -121,6 +125,10 @@ def save_profile(data: dict):
         "Hora Lanche": {"rich_text": [{"text": {"content": data.get("hora_lanche", "")}}]},
         "Hora Jantar": {"rich_text": [{"text": {"content": data.get("hora_jantar", "")}}]},
         "Hora Treino": {"rich_text": [{"text": {"content": data.get("hora_treino", "")}}]},
+        "Habitual Pequeno Almoco": {"rich_text": [{"text": {"content": data.get("habito_pequeno_almoco", "")}}]},
+        "Habitual Almoco": {"rich_text": [{"text": {"content": data.get("habito_almoco", "")}}]},
+        "Habitual Lanche": {"rich_text": [{"text": {"content": data.get("habito_lanche", "")}}]},
+        "Habitual Jantar": {"rich_text": [{"text": {"content": data.get("habito_jantar", "")}}]},
     }
     properties = {k: v for k, v in properties.items() if v is not None}
 

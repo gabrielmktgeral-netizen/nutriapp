@@ -79,6 +79,32 @@
     <input type="time" name="hora_treino" value="{{ profile.hora_treino if profile else '' }}">
   </div>
 
+  <h2 style="margin-top:20px;">⚡ Refeições habituais</h2>
+  <p class="subtitle" style="margin-top:-6px;">
+    O que costumas comer nesta refeição, quase sempre? Preenche e depois tens um botão para
+    registar num clique, sem escrever tudo outra vez. Deixa em branco se varia muito.
+  </p>
+  <div class="field">
+    <label>Pequeno-almoço habitual</label>
+    <input type="text" name="habito_pequeno_almoco" placeholder="ex: 2 ovos mexidos com pão"
+           value="{{ profile.habito_pequeno_almoco if profile else '' }}">
+  </div>
+  <div class="field">
+    <label>Almoço habitual</label>
+    <input type="text" name="habito_almoco" placeholder="ex: 150g frango grelhado com arroz"
+           value="{{ profile.habito_almoco if profile else '' }}">
+  </div>
+  <div class="field">
+    <label>Lanche habitual</label>
+    <input type="text" name="habito_lanche" placeholder="ex: iogurte com fruta"
+           value="{{ profile.habito_lanche if profile else '' }}">
+  </div>
+  <div class="field">
+    <label>Jantar habitual</label>
+    <input type="text" name="habito_jantar" placeholder="ex: sopa de legumes com peixe"
+           value="{{ profile.habito_jantar if profile else '' }}">
+  </div>
+
   <button class="btn" type="submit">Guardar perfil</button>
 </form>
 

@@ -73,10 +73,12 @@ def index():
     restante_kcal = max(round(targets["kcal"] - totals["kcal"]), 0)
     restante_prot = max(round(targets["protein_g"] - totals["proteina_g"]), 0)
 
+    habitos = {tipo: (profile.get(campo) or "").strip() for tipo, campo in HABITO_CAMPO.items()}
+
     return render_template(
         "index.html", profile=profile, totals=totals, targets=targets,
         meals_by_type=meals_by_type, meal_labels=nc.MEAL_LABELS,
-        week_summary=week_summary, today=today_iso,
+        week_summary=week_summary, today=today_iso, habitos=habitos,
         restante_kcal=restante_kcal, restante_prot=restante_prot,
         goal_label=nc.GOAL_LABELS.get(profile.get("objetivo"), ""),
     )
@@ -98,6 +100,10 @@ def onboarding():
             "hora_lanche": request.form.get("hora_lanche", "17:00"),
             "hora_jantar": request.form.get("hora_jantar", "20:00"),
             "hora_treino": request.form.get("hora_treino", ""),
+            "habito_pequeno_almoco": request.form.get("habito_pequeno_almoco", "").strip(),
+            "habito_almoco": request.form.get("habito_almoco", "").strip(),
+            "habito_lanche": request.form.get("habito_lanche", "").strip(),
+            "habito_jantar": request.form.get("habito_jantar", "").strip(),
         }
         db.save_profile(data)
         flash("Perfil guardado! 🎉", "success")
@@ -134,6 +140,64 @@ def nao_comi(tipo):
     db.add_meal(date.today().isoformat(), tipo, "Não comi nada", 0, 0, 0, 0)
     flash("Registado — sem problema, fica marcado.", "success")
     return redirect(url_for("index"))
+
+
+HABITO_CAMPO = {
+    "pequeno_almoco": "habito_pequeno_almoco",
+    "almoco": "habito_almoco",
+    "lanche": "habito_lanche",
+    "jantar": "habito_jantar",
+}
+
+
+@app.route("/registar-habitual/<tipo>", methods=["POST"])
+def registar_habitual(tipo):
+    profile = db.get_profile()
+    campo = HABITO_CAMPO.get(tipo)
+    texto = (profile.get(campo) if profile and campo else "") or ""
+    texto = texto.strip()
+    if not texto:
+        flash("Ainda não configuraste esta refeição habitual no Perfil.", "error")
+        return redirect(url_for("index"))
+
+    total, itens = parse_meal_text(texto)
+    db.add_meal(date.today().isoformat(), tipo, texto,
+                total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
+    flash("Refeição habitual registada! ⚡", "success")
+    return redirect(url_for("index"))
+
+
+@app.route("/dia/<data_iso>")
+def dia(data_iso):
+    try:
+        dia_ref = date.fromisoformat(data_iso)
+    except ValueError:
+        return redirect(url_for("index"))
+
+    profile = db.get_profile()
+    meals = db.get_meals_for_day(data_iso)
+    totals = {"kcal": 0, "proteina_g": 0, "hidratos_g": 0, "gordura_g": 0}
+    for m in meals:
+        totals["kcal"] += m["kcal"]
+        totals["proteina_g"] += m["proteina_g"]
+        totals["hidratos_g"] += m["hidratos_g"]
+        totals["gordura_g"] += m["gordura_g"]
+
+    targets = nc.macro_targets(profile) if profile else None
+    meals_by_type = {"pequeno_almoco": None, "almoco": None, "lanche": None, "jantar": None}
+    for m in meals:
+        meals_by_type[m["tipo"]] = m
+
+    today_iso = date.today().isoformat()
+    anterior = (dia_ref - timedelta(days=1)).isoformat()
+    seguinte = (dia_ref + timedelta(days=1)).isoformat()
+
+    return render_template(
+        "dia.html", data_iso=data_iso, dia_ref=dia_ref, meals_by_type=meals_by_type,
+        meal_labels=nc.MEAL_LABELS, totals=totals, targets=targets,
+        is_today=(data_iso == today_iso), anterior=anterior, seguinte=seguinte,
+        dias_semana=DIAS_SEMANA,
+    )
 
 
 @app.route("/despensa", methods=["GET", "POST"])

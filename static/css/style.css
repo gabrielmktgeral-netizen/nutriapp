@@ -77,6 +77,7 @@ body {
 
 .flash { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 0.95rem; }
 .flash-success { background: var(--green-light); color: var(--green); }
+.flash-error { background: #ffebee; color: var(--red); }
 
 .card {
   background: var(--card);
@@ -129,7 +130,7 @@ textarea { min-height: 80px; resize: vertical; }
 .week-grid {
   display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center;
 }
-.week-day { padding: 8px 4px; border-radius: 8px; background: #f5f5f5; font-size: 0.75rem; }
+.week-day { display: block; padding: 8px 4px; border-radius: 8px; background: #f5f5f5; font-size: 0.75rem; }
 .week-day.today { background: var(--green-light); border: 1px solid var(--green); }
 .week-day .d-label { font-weight: 700; }
 .week-day .d-kcal { color: var(--muted); }

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ data_iso }} - NutriApp{% endblock %}
+{% block content %}
+<h1>📅 {{ dias_semana[dia_ref.weekday()] }}</h1>
+<p class="subtitle">{{ data_iso }}{% if is_today %} — hoje{% endif %}</p>
+
+<div class="two-col" style="margin-bottom:16px;">
+  <a href="{{ url_for('dia', data_iso=anterior) }}" class="btn btn-outline">← Dia anterior</a>
+  <a href="{{ url_for('dia', data_iso=seguinte) }}" class="btn btn-outline">Dia seguinte →</a>
+</div>
+
+<div class="card">
+  <div class="macro-grid">
+    <div class="macro-box">
+      <div class="value">🔥 {{ totals.kcal|round|int }}</div>
+      <div class="label">/ {{ targets.kcal if targets else '-' }} kcal</div>
+    </div>
+    <div class="macro-box">
+      <div class="value">🥩 {{ totals.proteina_g|round|int }}g</div>
+      <div class="label">/ {{ targets.protein_g if targets else '-' }}g proteína</div>
+    </div>
+    <div class="macro-box">
+      <div class="value">🍚 {{ totals.hidratos_g|round|int }}g</div>
+      <div class="label">/ {{ targets.carbs_g if targets else '-' }}g hidratos</div>
+    </div>
+    <div class="macro-box">
+      <div class="value">🥑 {{ totals.gordura_g|round|int }}g</div>
+      <div class="label">/ {{ targets.fat_g if targets else '-' }}g gordura</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>🍽️ Refeições</h2>
+  <ul class="meal-list">
+    {% for tipo, info in meal_labels.items() %}
+      {% set meal = meals_by_type[tipo] %}
+      <li>
+        <span class="meal-status">{{ '✅' if meal else '⚪' }}</span>
+        <span class="meal-name">
+          {{ info[0] }} {{ info[1] }}
+          {% if meal and meal.texto_original != 'Não comi nada' %}
+            <br><span class="subtitle" style="font-size:0.8rem; margin:0;">{{ meal.texto_original }}</span>
+          {% endif %}
+        </span>
+        {% if meal %}
+          {% if meal.texto_original == 'Não comi nada' %}
+            <span class="meal-kcal">não comeste</span>
+          {% else %}
+            <span class="meal-kcal">{{ meal.kcal|round|int }} kcal</span>
+          {% endif %}
+        {% else %}
+          <span class="meal-kcal">sem registo</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+{% if is_today %}
+  <a href="{{ url_for('index') }}" class="btn btn-outline">← Voltar a hoje</a>
+{% endif %}
+{% endblock %}

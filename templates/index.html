@@ -53,6 +53,11 @@
           {% endif %}
         {% else %}
           <a class="btn btn-sm btn-outline" href="{{ url_for('registar_refeicao', tipo=tipo) }}">Registar</a>
+          {% if habitos[tipo] %}
+            <form method="post" action="{{ url_for('registar_habitual', tipo=tipo) }}" style="display:inline;" title="{{ habitos[tipo] }}">
+              <button type="submit" class="btn btn-sm" style="margin-left:6px;">⚡ Habitual</button>
+            </form>
+          {% endif %}
           <form method="post" action="{{ url_for('nao_comi', tipo=tipo) }}" style="display:inline;">
             <button type="submit" class="btn btn-sm btn-secondary" style="margin-left:6px;">Não comi</button>
           </form>
@@ -66,11 +71,12 @@
   <h2>📅 Semana</h2>
   <div class="week-grid">
     {% for d in week_summary %}
-      <div class="week-day {{ 'today' if d.is_today else '' }}">
+      <a href="{{ url_for('dia', data_iso=d.date) }}" class="week-day {{ 'today' if d.is_today else '' }}" style="text-decoration:none; color:inherit;">
         <div class="d-label">{{ d.label[:3] }}</div>
         <div class="d-kcal">{{ d.kcal }} kcal</div>
-      </div>
+      </a>
     {% endfor %}
   </div>
+  <p class="subtitle" style="font-size:0.8rem; margin-top:8px;">Clica num dia para ver o que registaste.</p>
 </div>
 {% endblock %}
