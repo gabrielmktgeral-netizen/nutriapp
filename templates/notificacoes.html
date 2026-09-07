@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Notificações{% endblock %}
+{% block content %}
+<h1>🔔 Notificações</h1>
+<p class="subtitle">Avisos no telemóvel para não te esqueceres de registar refeições ou treinar.</p>
+
+<div class="card" style="font-size:0.85rem;">
+  <strong>Como funciona:</strong>
+  <ul style="padding-left:18px; margin:8px 0 0;">
+    <li>Android: funciona logo, em qualquer navegador.</li>
+    <li>iPhone: adiciona primeiro o site ao ecrã principal (Partilhar → Adicionar ao ecrã principal), depois ativa aqui.</li>
+    <li>Avisamos ~30-90 min depois da hora de uma refeição não registada, e à hora do treino.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2 id="status-title">A verificar estado...</h2>
+  <p class="subtitle" id="status-text" style="margin-bottom:14px;"></p>
+  <button class="btn" id="btn-ativar">Ativar notificações</button>
+  <button class="btn btn-secondary" id="btn-desativar" hidden>Desativar neste dispositivo</button>
+</div>
+
+<div class="card">
+  <h2>Testar</h2>
+  <p class="subtitle" style="margin-bottom:10px;">
+    {{ n_subs }} dispositivo(s) ativo(s) neste site.
+  </p>
+  <form method="post" action="{{ url_for('notificacoes_teste') }}">
+    <button class="btn btn-outline" type="submit">Enviar notificação de teste</button>
+  </form>
+</div>
+
+<script>
+  const VAPID_PUBLIC_KEY = "{{ vapid_public_key }}";
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+  }
+
+  const statusTitle = document.getElementById("status-title");
+  const statusText = document.getElementById("status-text");
+  const btnAtivar = document.getElementById("btn-ativar");
+  const btnDesativar = document.getElementById("btn-desativar");
+
+  function setEstado(texto, subtexto, ativo) {
+    statusTitle.textContent = texto;
+    statusText.textContent = subtexto;
+    btnAtivar.hidden = ativo;
+    btnDesativar.hidden = !ativo;
+  }
+
+  async function refrescarEstado() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setEstado("Não suportado neste navegador", "Tenta noutro navegador ou dispositivo.", false);
+      btnAtivar.disabled = true;
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setEstado("Notificações bloqueadas", "Foram bloqueadas nas definições do navegador — tens de as permitir lá primeiro.", false);
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      setEstado("Ativas neste dispositivo ✅", "Vais receber avisos aqui.", true);
+    } else {
+      setEstado("Ainda não ativaste aqui", "Carrega no botão para ativar neste dispositivo.", false);
+    }
+  }
+
+  btnAtivar.addEventListener("click", async () => {
+    try {
+      const permissao = await Notification.requestPermission();
+      if (permissao !== "granted") {
+        setEstado("Permissão recusada", "Tens de permitir notificações para este site funcionar.", false);
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+      await fetch("{{ url_for('notificacoes_subscrever') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      setEstado("Ativas neste dispositivo ✅", "Vais receber avisos aqui.", true);
+      location.reload();
+    } catch (e) {
+      console.error(e);
+      setEstado("Não foi possível ativar", String(e), false);
+    }
+  });
+
+  btnDesativar.addEventListener("click", async () => {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await fetch("{{ url_for('notificacoes_cancelar') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      });
+      await sub.unsubscribe();
+    }
+    setEstado("Ainda não ativaste aqui", "Carrega no botão para ativar neste dispositivo.", false);
+    location.reload();
+  });
+
+  refrescarEstado();
+</script>
+{% endblock %}

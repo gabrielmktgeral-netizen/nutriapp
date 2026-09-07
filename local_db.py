@@ -9,7 +9,8 @@ from datetime import date
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 DATA_FILE = os.path.join(DATA_DIR, "local_db.json")
 
-_EMPTY = {"profile": None, "meals": [], "pantry": [], "weights": [], "exercises": [], "excluidos": []}
+_EMPTY = {"profile": None, "meals": [], "pantry": [], "weights": [], "exercises": [], "excluidos": [],
+          "push_subscriptions": []}
 
 
 def configured():
@@ -144,3 +145,30 @@ def add_exercise(data_iso, nome, duracao_min=None, kcal_estimadas=None):
 def get_exercise_between(start_iso, end_iso):
     data = _load()
     return [e for e in data["exercises"] if start_iso <= e["data"] <= end_iso]
+
+
+# ---------- NOTIFICAÇÕES PUSH ----------
+
+def get_push_subscriptions():
+    data = _load()
+    return data.setdefault("push_subscriptions", [])
+
+
+def add_push_subscription(subscription_info: dict):
+    data = _load()
+    subs = data.setdefault("push_subscriptions", [])
+    endpoint = subscription_info.get("endpoint", "")
+    for s in subs:
+        if s["endpoint"] == endpoint:
+            return s
+    item = {"page_id": str(uuid.uuid4()), "endpoint": endpoint, "keys": subscription_info.get("keys", {})}
+    subs.append(item)
+    _save(data)
+    return item
+
+
+def delete_push_subscription(endpoint):
+    data = _load()
+    subs = data.setdefault("push_subscriptions", [])
+    data["push_subscriptions"] = [s for s in subs if s["endpoint"] != endpoint]
+    _save(data)

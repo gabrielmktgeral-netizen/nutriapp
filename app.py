@@ -1,7 +1,7 @@
 import os
 from datetime import date, datetime, timedelta
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 
 import data_store as db
 import nutrition_calc as nc
@@ -10,10 +10,27 @@ from food_data import lookup as food_lookup
 from recipes import sugerir_receitas
 from workouts import get_workout_for_goal, youtube_search_url
 from exercise_planner import plano_diario, plano_semanal
+import push
+from reminders import verificar_lembretes
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-troca-isto")
 app.jinja_env.filters["youtube_url"] = youtube_search_url
+
+
+def _start_scheduler():
+    if os.environ.get("DISABLE_SCHEDULER"):
+        return
+    # evita arrancar 2 vezes por causa do reloader do modo debug
+    if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        return
+    from apscheduler.schedulers.background import BackgroundScheduler
+    scheduler = BackgroundScheduler(daemon=True)
+    scheduler.add_job(verificar_lembretes, "interval", minutes=15)
+    scheduler.start()
+
+
+_start_scheduler()
 
 DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 
@@ -140,6 +157,54 @@ def nao_comi(tipo):
     db.add_meal(date.today().isoformat(), tipo, "Não comi nada", 0, 0, 0, 0)
     flash("Registado — sem problema, fica marcado.", "success")
     return redirect(url_for("index"))
+
+
+@app.route("/sw.js")
+def service_worker():
+    # servido na raiz (não em /static/) para o scope do service worker cobrir o site todo
+    return send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
+
+
+@app.route("/notificacoes")
+def notificacoes():
+    n_subs = len(db.get_push_subscriptions()) if db.configured() else 0
+    return render_template("notificacoes.html", vapid_public_key=push.get_public_key(), n_subs=n_subs)
+
+
+@app.route("/notificacoes/subscrever", methods=["POST"])
+def notificacoes_subscrever():
+    sub = request.get_json(silent=True) or {}
+    if not sub.get("endpoint"):
+        return jsonify({"ok": False}), 400
+    db.add_push_subscription(sub)
+    return jsonify({"ok": True})
+
+
+@app.route("/notificacoes/cancelar", methods=["POST"])
+def notificacoes_cancelar():
+    body = request.get_json(silent=True) or {}
+    endpoint = body.get("endpoint")
+    if endpoint:
+        db.delete_push_subscription(endpoint)
+    return jsonify({"ok": True})
+
+
+@app.route("/notificacoes/teste", methods=["POST"])
+def notificacoes_teste():
+    subs = db.get_push_subscriptions()
+    enviados = 0
+    for s in subs:
+        ok = push.send_notification({"endpoint": s["endpoint"], "keys": s["keys"]},
+                                      "🥗 NutriApp", "Notificações a funcionar! 🎉", "/")
+        if ok:
+            enviados += 1
+        else:
+            db.delete_push_subscription(s["endpoint"])
+    if enviados:
+        flash(f"Notificação de teste enviada ({enviados}). Devias recebê-la em segundos.", "success")
+    else:
+        flash("Ainda não há nenhum dispositivo a receber notificações. Ativa primeiro.", "error")
+    return redirect(url_for("notificacoes"))
 
 
 HABITO_CAMPO = {

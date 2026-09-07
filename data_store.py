@@ -17,6 +17,7 @@ if USING_NOTION:
         get_excluidos, add_excluido, delete_excluido,
         add_weight, get_weight_history,
         add_exercise, get_exercise_between,
+        get_push_subscriptions, add_push_subscription, delete_push_subscription,
     )
     BACKEND_NAME = "Notion"
 else:
@@ -27,5 +28,6 @@ else:
         get_excluidos, add_excluido, delete_excluido,
         add_weight, get_weight_history,
         add_exercise, get_exercise_between,
+        get_push_subscriptions, add_push_subscription, delete_push_subscription,
     )
     BACKEND_NAME = "Local (ficheiro JSON, modo teste)"

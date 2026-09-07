@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}NutriApp{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
+  <meta name="theme-color" content="#2e7d32">
 </head>
 <body>
   <nav class="topnav">
@@ -14,6 +17,7 @@
       <a href="{{ url_for('sugestao') }}" class="{{ 'active' if request.endpoint=='sugestao' }}">Sugestão</a>
       <a href="{{ url_for('exercicio') }}" class="{{ 'active' if request.endpoint=='exercicio' }}">Exercício</a>
       <a href="{{ url_for('onboarding') }}" class="{{ 'active' if request.endpoint in ['onboarding','despensa'] }}">Perfil</a>
+      <a href="{{ url_for('notificacoes') }}" class="{{ 'active' if request.endpoint=='notificacoes' }}">🔔</a>
     </div>
   </nav>
 
@@ -35,5 +39,13 @@
 
     {% block content %}{% endblock %}
   </main>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(function (e) {
+        console.warn("Falha ao registar service worker:", e);
+      });
+    }
+  </script>
 </body>
 </html>

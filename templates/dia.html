@@ -9,23 +9,28 @@
   <a href="{{ url_for('dia', data_iso=seguinte) }}" class="btn btn-outline">Dia seguinte →</a>
 </div>
 
+{% macro pct(v, t) %}{{ [((v / t * 100) if t else 0), 100]|min }}{% endmacro %}
 <div class="card">
   <div class="macro-grid">
     <div class="macro-box">
       <div class="value">🔥 {{ totals.kcal|round|int }}</div>
       <div class="label">/ {{ targets.kcal if targets else '-' }} kcal</div>
+      {% if targets %}<div class="progress-bar"><div style="width:{{ pct(totals.kcal, targets.kcal) }}%;"></div></div>{% endif %}
     </div>
     <div class="macro-box">
       <div class="value">🥩 {{ totals.proteina_g|round|int }}g</div>
       <div class="label">/ {{ targets.protein_g if targets else '-' }}g proteína</div>
+      {% if targets %}<div class="progress-bar"><div style="width:{{ pct(totals.proteina_g, targets.protein_g) }}%;"></div></div>{% endif %}
     </div>
     <div class="macro-box">
       <div class="value">🍚 {{ totals.hidratos_g|round|int }}g</div>
       <div class="label">/ {{ targets.carbs_g if targets else '-' }}g hidratos</div>
+      {% if targets %}<div class="progress-bar"><div style="width:{{ pct(totals.hidratos_g, targets.carbs_g) }}%;"></div></div>{% endif %}
     </div>
     <div class="macro-box">
       <div class="value">🥑 {{ totals.gordura_g|round|int }}g</div>
       <div class="label">/ {{ targets.fat_g if targets else '-' }}g gordura</div>
+      {% if targets %}<div class="progress-bar"><div style="width:{{ pct(totals.gordura_g, targets.fat_g) }}%;"></div></div>{% endif %}
     </div>
   </div>
 </div>
@@ -57,7 +62,7 @@
   </ul>
 </div>
 
-{% if is_today %}
+{% if not is_today %}
   <a href="{{ url_for('index') }}" class="btn btn-outline">← Voltar a hoje</a>
 {% endif %}
 {% endblock %}

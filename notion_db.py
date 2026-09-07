@@ -1,4 +1,5 @@
 """Camada de acesso à base de dados Notion (usada como 'BD' da app)."""
+import json
 import os
 import requests
 
@@ -13,6 +14,7 @@ DS_DESPENSA = "257fb7a6-e34a-49b2-8a3b-ec21aec0ff05"
 DS_PESO = "8952c054-bfb7-4f3f-8920-0876a84e82b1"
 DS_EXERCICIO = "818ab87d-0b92-46fb-ab11-e60b522b514d"
 DS_EXCLUIDOS = "3c33ec21-6415-4cbf-bea8-b73344b47112"
+DS_PUSH = "3f72858d-ef60-4fb0-a622-6b78c005f2e0"
 
 
 def _headers():
@@ -79,6 +81,8 @@ def _prop(page, name, kind):
     if kind == "date":
         d = p.get("date")
         return d["start"] if d else None
+    if kind == "checkbox":
+        return bool(p.get("checkbox"))
     return None
 
 
@@ -262,3 +266,45 @@ def get_exercise_between(start_iso, end_iso):
         "duracao_min": _prop(p, "Duracao min", "number"),
         "kcal_estimadas": _prop(p, "Kcal Estimadas", "number"),
     } for p in results]
+
+
+# ---------- NOTIFICAÇÕES PUSH ----------
+
+def get_push_subscriptions():
+    filter_ = {"property": "Ativo", "checkbox": {"equals": True}}
+    results = _query(DS_PUSH, filter_=filter_)
+    out = []
+    for p in results:
+        chaves_raw = _prop(p, "Chaves", "text")
+        try:
+            keys = json.loads(chaves_raw) if chaves_raw else {}
+        except (TypeError, ValueError):
+            keys = {}
+        out.append({
+            "page_id": p["id"],
+            "endpoint": _prop(p, "Endpoint", "text"),
+            "keys": keys,
+        })
+    return out
+
+
+def add_push_subscription(subscription_info: dict):
+    endpoint = subscription_info.get("endpoint", "")
+    keys = subscription_info.get("keys", {})
+    # evita duplicados: se já existir este endpoint, não cria outro
+    existentes = _query(DS_PUSH, filter_={"property": "Endpoint", "rich_text": {"equals": endpoint}})
+    if existentes:
+        return existentes[0]
+    properties = {
+        "Nome": {"title": [{"text": {"content": f"Subscrição {endpoint[-12:]}"}}]},
+        "Endpoint": {"rich_text": [{"text": {"content": endpoint}}]},
+        "Chaves": {"rich_text": [{"text": {"content": json.dumps(keys)}}]},
+        "Ativo": {"checkbox": True},
+    }
+    return _create_page(DS_PUSH, properties)
+
+
+def delete_push_subscription(endpoint):
+    results = _query(DS_PUSH, filter_={"property": "Endpoint", "rich_text": {"equals": endpoint}})
+    for p in results:
+        _delete_page(p["id"])
