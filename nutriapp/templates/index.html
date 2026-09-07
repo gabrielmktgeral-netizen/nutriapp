@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Hoje - NutriApp{% endblock %}
+{% block content %}
+<h1>HOJE</h1>
+<p class="subtitle">Objetivo: {{ goal_label }}</p>
+
+<div class="card">
+  <div class="macro-grid">
+    <div class="macro-box">
+      <div class="value">🔥 {{ totals.kcal|round|int }}</div>
+      <div class="label">/ {{ targets.kcal }} kcal</div>
+    </div>
+    <div class="macro-box">
+      <div class="value">🥩 {{ totals.proteina_g|round|int }}g</div>
+      <div class="label">/ {{ targets.protein_g }}g proteína</div>
+    </div>
+    <div class="macro-box">
+      <div class="value">🍚 {{ totals.hidratos_g|round|int }}g</div>
+      <div class="label">/ {{ targets.carbs_g }}g hidratos</div>
+    </div>
+    <div class="macro-box">
+      <div class="value">🥑 {{ totals.gordura_g|round|int }}g</div>
+      <div class="label">/ {{ targets.fat_g }}g gordura</div>
+    </div>
+  </div>
+</div>
+
+<div class="assistant-box">
+  <strong>🤖 Assistente</strong>
+  <p style="margin:8px 0 0;">
+    {% if restante_kcal > 0 %}
+      Ainda tens <strong>{{ restante_kcal }} kcal</strong> e <strong>{{ restante_prot }}g de proteína</strong> para hoje.
+    {% else %}
+      Já atingiste o teu objetivo calórico de hoje. 🎉
+    {% endif %}
+    <a href="{{ url_for('sugestao') }}">Ver sugestão com o que tens em casa →</a>
+  </p>
+</div>
+
+<div class="card">
+  <h2>🍽️ Refeições</h2>
+  <ul class="meal-list">
+    {% for tipo, info in meal_labels.items() %}
+      {% set meal = meals_by_type[tipo] %}
+      <li>
+        <span class="meal-status">{{ '✅' if meal else '⚪' }}</span>
+        <span class="meal-name">{{ info[0] }} {{ info[1] }}</span>
+        {% if meal %}
+          {% if meal.texto_original == 'Não comi nada' %}
+            <span class="meal-kcal">não comeste</span>
+          {% else %}
+            <span class="meal-kcal">{{ meal.kcal|round|int }} kcal</span>
+          {% endif %}
+        {% else %}
+          <a class="btn btn-sm btn-outline" href="{{ url_for('registar_refeicao', tipo=tipo) }}">Registar</a>
+          <form method="post" action="{{ url_for('nao_comi', tipo=tipo) }}" style="display:inline;">
+            <button type="submit" class="btn btn-sm btn-secondary" style="margin-left:6px;">Não comi</button>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card">
+  <h2>📅 Semana</h2>
+  <div class="week-grid">
+    {% for d in week_summary %}
+      <div class="week-day {{ 'today' if d.is_today else '' }}">
+        <div class="d-label">{{ d.label[:3] }}</div>
+        <div class="d-kcal">{{ d.kcal }} kcal</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

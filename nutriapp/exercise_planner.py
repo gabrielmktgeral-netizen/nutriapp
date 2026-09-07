@@ -9,7 +9,7 @@ se comeste bem, tens mais "combustível" para um treino completo ou mais intenso
 Fontes usadas para calibrar os limiares: TrainingPeaks (nutrition periodization)
 e MacroFactor (treino em défice calórico) — ver README."""
 
-from workouts import get_workout_for_goal, get_variants_for_goal
+from workouts import get_workout_for_goal
 
 TREINO_LEVE = {
     "titulo": "Treino leve de recuperação",
@@ -31,11 +31,9 @@ def _percentagens(totals, targets):
     return kcal_pct, protein_pct
 
 
-def plano_diario(objetivo, totals, targets, weekday=0):
-    """Decide o treino de hoje com base no que já foi registado hoje.
-    `weekday` (0=Segunda...6=Domingo) escolhe qual variante do objetivo usar hoje,
-    para não ser sempre o mesmo treino — vai alternando ao longo da semana."""
-    base = get_workout_for_goal(objetivo, weekday)
+def plano_diario(objetivo, totals, targets):
+    """Decide o treino de hoje com base no que já foi registado hoje."""
+    base = get_workout_for_goal(objetivo)
 
     if not totals or totals.get("kcal", 0) == 0:
         return {
@@ -73,17 +71,8 @@ def plano_diario(objetivo, totals, targets, weekday=0):
 
 def plano_semanal(objetivo, dias_semana_totais, targets):
     """dias_semana_totais: lista de 7 dicts {kcal, proteina_g} (um por dia, Seg-Dom).
-    Decide uma estrutura semanal (treino completo / leve / descanso por dia).
-    Os dias de treino completo alternam entre as variantes do objetivo (ex: Push/Pull/Pernas),
-    para dar variedade em vez de repetir sempre o mesmo treino."""
-    variantes = get_variants_for_goal(objetivo)
-    titulos = [v["titulo"] for v in variantes]
-    _i = {"n": 0}
-
-    def _proximo_titulo():
-        t = titulos[_i["n"] % len(titulos)]
-        _i["n"] += 1
-        return t
+    Decide uma estrutura semanal (treino completo / leve / descanso por dia)."""
+    base_titulo = get_workout_for_goal(objetivo)["titulo"]
 
     dias_com_dados = [d for d in dias_semana_totais if d["kcal"] > 0]
     dias_logados = len(dias_com_dados)
@@ -121,13 +110,11 @@ def plano_semanal(objetivo, dias_semana_totais, targets):
             "nivel": "alto",
             "mensagem": f"Em média comeste {round(media_kcal_pct * 100)}% do teu objetivo esta semana — "
                         "tens margem para uma semana mais completa, com um dia extra de treino.",
-            "estrutura": [_proximo_titulo(), _proximo_titulo(), "Descanso", _proximo_titulo(), _proximo_titulo(),
-                          "Cardio extra", "Descanso"],
+            "estrutura": [base_titulo, base_titulo, "Descanso", base_titulo, base_titulo, "Cardio extra", "Descanso"],
         }
 
     return {
         "nivel": "equilibrado",
         "mensagem": "A tua alimentação esteve equilibrada com o teu objetivo esta semana — mantemos um plano completo.",
-        "estrutura": [_proximo_titulo(), "Descanso", _proximo_titulo(), _proximo_titulo(), "Descanso",
-                      _proximo_titulo(), "Descanso"],
+        "estrutura": [base_titulo, "Descanso", base_titulo, base_titulo, "Descanso", base_titulo, "Descanso"],
     }

@@ -79,58 +79,6 @@
     <input type="time" name="hora_treino" value="{{ profile.hora_treino if profile else '' }}">
   </div>
 
-  <h2 style="margin-top:20px;">⚡ Refeições habituais</h2>
-  <p class="subtitle" style="margin-top:-6px;">
-    O que costumas comer nesta refeição, quase sempre? Preenche e depois tens um botão para
-    registar num clique, sem escrever tudo outra vez. Deixa em branco se varia muito.
-  </p>
-  <div class="field">
-    <label>Pequeno-almoço habitual</label>
-    <input type="text" name="habito_pequeno_almoco" placeholder="ex: 2 ovos mexidos com pão"
-           value="{{ profile.habito_pequeno_almoco if profile else '' }}">
-  </div>
-  <div class="field">
-    <label>Almoço habitual</label>
-    <input type="text" name="habito_almoco" placeholder="ex: 150g frango grelhado com arroz"
-           value="{{ profile.habito_almoco if profile else '' }}">
-  </div>
-  <div class="field">
-    <label>Lanche habitual</label>
-    <input type="text" name="habito_lanche" placeholder="ex: iogurte com fruta"
-           value="{{ profile.habito_lanche if profile else '' }}">
-  </div>
-  <div class="field">
-    <label>Jantar habitual</label>
-    <input type="text" name="habito_jantar" placeholder="ex: sopa de legumes com peixe"
-           value="{{ profile.habito_jantar if profile else '' }}">
-  </div>
-
-  <h2 style="margin-top:20px;">🔕 Lembretes</h2>
-  <p class="subtitle" style="margin-top:-6px;">
-    Não costumas comer alguma destas refeições? Ativa para eu parar de te notificar sobre ela.
-    Continuas a poder registá-la à mão sempre que quiseres (ex: ao fim de semana) — só paro de avisar.
-  </p>
-  <div class="field" style="flex-direction:row; align-items:center; gap:8px;">
-    <input type="checkbox" name="pular_lembrete_pequeno_almoco" id="pl_pa" style="width:auto;"
-           {{ 'checked' if profile and profile.pular_lembrete_pequeno_almoco }}>
-    <label for="pl_pa" style="margin:0;">Não costumo tomar pequeno-almoço — não me avises</label>
-  </div>
-  <div class="field" style="flex-direction:row; align-items:center; gap:8px;">
-    <input type="checkbox" name="pular_lembrete_almoco" id="pl_al" style="width:auto;"
-           {{ 'checked' if profile and profile.pular_lembrete_almoco }}>
-    <label for="pl_al" style="margin:0;">Não costumo almoçar — não me avises</label>
-  </div>
-  <div class="field" style="flex-direction:row; align-items:center; gap:8px;">
-    <input type="checkbox" name="pular_lembrete_lanche" id="pl_la" style="width:auto;"
-           {{ 'checked' if profile and profile.pular_lembrete_lanche }}>
-    <label for="pl_la" style="margin:0;">Não costumo lanchar — não me avises</label>
-  </div>
-  <div class="field" style="flex-direction:row; align-items:center; gap:8px;">
-    <input type="checkbox" name="pular_lembrete_jantar" id="pl_ja" style="width:auto;"
-           {{ 'checked' if profile and profile.pular_lembrete_jantar }}>
-    <label for="pl_ja" style="margin:0;">Não costumo jantar — não me avises</label>
-  </div>
-
   <button class="btn" type="submit">Guardar perfil</button>
 </form>
 
@@ -143,11 +91,5 @@
   <h2>🧊 A tua despensa</h2>
   <p class="subtitle" style="margin-bottom:12px;">O que tens em casa — usado pelo assistente para sugerir refeições.</p>
   <a href="{{ url_for('despensa') }}" class="btn btn-outline">Gerir despensa →</a>
-</div>
-
-<div class="card">
-  <h2>📖 As tuas receitas</h2>
-  <p class="subtitle" style="margin-bottom:12px;">Cria as tuas próprias receitas — calorias calculadas automaticamente.</p>
-  <a href="{{ url_for('receitas') }}" class="btn btn-outline">Gerir receitas →</a>
 </div>
 {% endblock %}

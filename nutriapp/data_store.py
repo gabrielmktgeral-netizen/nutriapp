@@ -12,28 +12,20 @@ USING_NOTION = bool(os.environ.get("NOTION_TOKEN"))
 if USING_NOTION:
     from notion_db import (  # noqa: F401
         configured, get_profile, save_profile,
-        add_meal, get_meals_between, get_meals_for_day, get_meal, update_meal, delete_meal,
+        add_meal, get_meals_between, get_meals_for_day,
         get_pantry, add_pantry_item, delete_pantry_item,
         get_excluidos, add_excluido, delete_excluido,
         add_weight, get_weight_history,
         add_exercise, get_exercise_between,
-        start_exercise, finish_exercise, get_active_exercise,
-        get_push_subscriptions, add_push_subscription, delete_push_subscription,
-        get_custom_recipes, add_custom_recipe, delete_custom_recipe,
-        get_custom_recipe, update_custom_recipe,
     )
     BACKEND_NAME = "Notion"
 else:
     from local_db import (  # noqa: F401
         configured, get_profile, save_profile,
-        add_meal, get_meals_between, get_meals_for_day, get_meal, update_meal, delete_meal,
+        add_meal, get_meals_between, get_meals_for_day,
         get_pantry, add_pantry_item, delete_pantry_item,
         get_excluidos, add_excluido, delete_excluido,
         add_weight, get_weight_history,
         add_exercise, get_exercise_between,
-        start_exercise, finish_exercise, get_active_exercise,
-        get_push_subscriptions, add_push_subscription, delete_push_subscription,
-        get_custom_recipes, add_custom_recipe, delete_custom_recipe,
-        get_custom_recipe, update_custom_recipe,
     )
     BACKEND_NAME = "Local (ficheiro JSON, modo teste)"

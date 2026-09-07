@@ -121,6 +121,10 @@ def onboarding():
             "habito_almoco": request.form.get("habito_almoco", "").strip(),
             "habito_lanche": request.form.get("habito_lanche", "").strip(),
             "habito_jantar": request.form.get("habito_jantar", "").strip(),
+            "pular_lembrete_pequeno_almoco": bool(request.form.get("pular_lembrete_pequeno_almoco")),
+            "pular_lembrete_almoco": bool(request.form.get("pular_lembrete_almoco")),
+            "pular_lembrete_lanche": bool(request.form.get("pular_lembrete_lanche")),
+            "pular_lembrete_jantar": bool(request.form.get("pular_lembrete_jantar")),
         }
         db.save_profile(data)
         flash("Perfil guardado! 🎉", "success")
@@ -504,10 +508,34 @@ def exercicio():
             "kcal": sum(m["kcal"] for m in meals_today),
             "proteina_g": sum(m["proteina_g"] for m in meals_today),
         }
-        plano = plano_diario(objetivo, totals, targets)
+        plano = plano_diario(objetivo, totals, targets, weekday=today.weekday())
+
+    active_exercise = db.get_active_exercise() if db.configured() else None
 
     return render_template("exercicio.html", week_ex=week_ex, goal_label=goal_label, modo=modo, plano=plano,
-                            today_weekday=today.weekday())
+                            today_weekday=today.weekday(), active_exercise=active_exercise)
+
+
+@app.route("/exercicio/iniciar", methods=["POST"])
+def iniciar_exercicio():
+    nome = request.form.get("nome", "").strip()
+    if not nome:
+        flash("Falta o nome do treino.", "error")
+        return redirect(url_for("exercicio"))
+    if db.get_active_exercise():
+        flash("Já tens um treino em curso — termina-o primeiro.", "error")
+        return redirect(url_for("exercicio"))
+    db.start_exercise(nome)
+    flash("Treino iniciado! ⏱️ Boa sorte!", "success")
+    return redirect(url_for("exercicio"))
+
+
+@app.route("/exercicio/finalizar/<page_id>", methods=["POST"])
+def finalizar_exercicio(page_id):
+    kcal = request.form.get("kcal_estimadas")
+    db.finish_exercise(page_id, int(kcal) if kcal else None)
+    flash("Treino finalizado! 💪 Bom trabalho!", "success")
+    return redirect(url_for("exercicio"))
 
 
 if __name__ == "__main__":

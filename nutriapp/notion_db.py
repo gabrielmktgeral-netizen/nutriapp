@@ -1,7 +1,5 @@
 """Camada de acesso à base de dados Notion (usada como 'BD' da app)."""
-import json
 import os
-from datetime import date, datetime
 import requests
 
 NOTION_TOKEN = os.environ.get("NOTION_TOKEN", "")
@@ -15,8 +13,6 @@ DS_DESPENSA = "257fb7a6-e34a-49b2-8a3b-ec21aec0ff05"
 DS_PESO = "8952c054-bfb7-4f3f-8920-0876a84e82b1"
 DS_EXERCICIO = "818ab87d-0b92-46fb-ab11-e60b522b514d"
 DS_EXCLUIDOS = "3c33ec21-6415-4cbf-bea8-b73344b47112"
-DS_PUSH = "3f72858d-ef60-4fb0-a622-6b78c005f2e0"
-DS_RECEITAS_CUSTOM = "13b07843-bc4e-4f35-800c-e9164aa4f053"
 
 
 def _headers():
@@ -83,8 +79,6 @@ def _prop(page, name, kind):
     if kind == "date":
         d = p.get("date")
         return d["start"] if d else None
-    if kind == "checkbox":
-        return bool(p.get("checkbox"))
     return None
 
 
@@ -109,14 +103,6 @@ def get_profile():
         "hora_lanche": _prop(page, "Hora Lanche", "text") or "17:00",
         "hora_jantar": _prop(page, "Hora Jantar", "text") or "20:00",
         "hora_treino": _prop(page, "Hora Treino", "text") or "",
-        "habito_pequeno_almoco": _prop(page, "Habitual Pequeno Almoco", "text") or "",
-        "habito_almoco": _prop(page, "Habitual Almoco", "text") or "",
-        "habito_lanche": _prop(page, "Habitual Lanche", "text") or "",
-        "habito_jantar": _prop(page, "Habitual Jantar", "text") or "",
-        "pular_lembrete_pequeno_almoco": _prop(page, "Pular Lembrete Pequeno Almoco", "checkbox"),
-        "pular_lembrete_almoco": _prop(page, "Pular Lembrete Almoco", "checkbox"),
-        "pular_lembrete_lanche": _prop(page, "Pular Lembrete Lanche", "checkbox"),
-        "pular_lembrete_jantar": _prop(page, "Pular Lembrete Jantar", "checkbox"),
     }
 
 
@@ -135,14 +121,6 @@ def save_profile(data: dict):
         "Hora Lanche": {"rich_text": [{"text": {"content": data.get("hora_lanche", "")}}]},
         "Hora Jantar": {"rich_text": [{"text": {"content": data.get("hora_jantar", "")}}]},
         "Hora Treino": {"rich_text": [{"text": {"content": data.get("hora_treino", "")}}]},
-        "Habitual Pequeno Almoco": {"rich_text": [{"text": {"content": data.get("habito_pequeno_almoco", "")}}]},
-        "Habitual Almoco": {"rich_text": [{"text": {"content": data.get("habito_almoco", "")}}]},
-        "Habitual Lanche": {"rich_text": [{"text": {"content": data.get("habito_lanche", "")}}]},
-        "Habitual Jantar": {"rich_text": [{"text": {"content": data.get("habito_jantar", "")}}]},
-        "Pular Lembrete Pequeno Almoco": {"checkbox": bool(data.get("pular_lembrete_pequeno_almoco"))},
-        "Pular Lembrete Almoco": {"checkbox": bool(data.get("pular_lembrete_almoco"))},
-        "Pular Lembrete Lanche": {"checkbox": bool(data.get("pular_lembrete_lanche"))},
-        "Pular Lembrete Jantar": {"checkbox": bool(data.get("pular_lembrete_jantar"))},
     }
     properties = {k: v for k, v in properties.items() if v is not None}
 
@@ -167,38 +145,6 @@ def add_meal(data_iso, tipo, texto_original, kcal, proteina_g, hidratos_g, gordu
         "Gordura g": {"number": round(gordura_g, 1)},
     }
     return _create_page(DS_REFEICOES, properties)
-
-
-def update_meal(page_id, texto_original, kcal, proteina_g, hidratos_g, gordura_g):
-    properties = {
-        "Texto Original": {"rich_text": [{"text": {"content": texto_original[:1900]}}]},
-        "Kcal": {"number": round(kcal, 1)},
-        "Proteina g": {"number": round(proteina_g, 1)},
-        "Hidratos g": {"number": round(hidratos_g, 1)},
-        "Gordura g": {"number": round(gordura_g, 1)},
-    }
-    return _update_page(page_id, properties)
-
-
-def delete_meal(page_id):
-    return _delete_page(page_id)
-
-
-def get_meal(page_id):
-    url = f"{BASE_URL}/pages/{page_id}"
-    r = requests.get(url, headers=_headers(), timeout=15)
-    r.raise_for_status()
-    page = r.json()
-    return {
-        "page_id": page["id"],
-        "data": _prop(page, "Data", "date"),
-        "tipo": _prop(page, "Tipo", "select"),
-        "texto_original": _prop(page, "Texto Original", "text"),
-        "kcal": _prop(page, "Kcal", "number") or 0,
-        "proteina_g": _prop(page, "Proteina g", "number") or 0,
-        "hidratos_g": _prop(page, "Hidratos g", "number") or 0,
-        "gordura_g": _prop(page, "Gordura g", "number") or 0,
-    }
 
 
 def get_meals_between(start_iso, end_iso):
@@ -308,164 +254,3 @@ def get_exercise_between(start_iso, end_iso):
         "duracao_min": _prop(p, "Duracao min", "number"),
         "kcal_estimadas": _prop(p, "Kcal Estimadas", "number"),
     } for p in results]
-
-
-def start_exercise(nome):
-    """Cria um registo de treino com Início = agora e Fim vazio (treino em curso)."""
-    agora = datetime.now().isoformat()
-    properties = {
-        "Nome": {"title": [{"text": {"content": nome}}]},
-        "Data": {"date": {"start": date.today().isoformat()}},
-        "Inicio": {"date": {"start": agora}},
-    }
-    return _create_page(DS_EXERCICIO, properties)
-
-
-def get_active_exercise():
-    """Devolve o treino em curso (tem Início mas não tem Fim), se existir."""
-    filter_ = {"and": [
-        {"property": "Inicio", "date": {"is_not_empty": True}},
-        {"property": "Fim", "date": {"is_empty": True}},
-    ]}
-    results = _query(DS_EXERCICIO, filter_=filter_)
-    if not results:
-        return None
-    p = results[0]
-    return {
-        "page_id": p["id"],
-        "nome": _prop(p, "Nome", "title"),
-        "inicio": _prop(p, "Inicio", "date"),
-    }
-
-
-def finish_exercise(page_id, kcal_estimadas=None):
-    """Marca Fim = agora e calcula Duracao min a partir de Início -> Fim."""
-    url = f"{BASE_URL}/pages/{page_id}"
-    r = requests.get(url, headers=_headers(), timeout=15)
-    r.raise_for_status()
-    page = r.json()
-    inicio_str = _prop(page, "Inicio", "date")
-    agora_dt = datetime.now()
-    duracao_min = None
-    if inicio_str:
-        try:
-            inicio_dt = datetime.fromisoformat(inicio_str.replace("Z", "+00:00"))
-            if inicio_dt.tzinfo and agora_dt.tzinfo is None:
-                agora_dt_cmp = agora_dt.replace(tzinfo=inicio_dt.tzinfo)
-            else:
-                agora_dt_cmp = agora_dt
-            duracao_min = max(1, round((agora_dt_cmp - inicio_dt).total_seconds() / 60))
-        except (ValueError, TypeError):
-            duracao_min = None
-    properties = {"Fim": {"date": {"start": agora_dt.isoformat()}}}
-    if duracao_min is not None:
-        properties["Duracao min"] = {"number": duracao_min}
-    if kcal_estimadas is not None:
-        properties["Kcal Estimadas"] = {"number": kcal_estimadas}
-    return _update_page(page_id, properties)
-
-
-# ---------- NOTIFICAÇÕES PUSH ----------
-
-def get_push_subscriptions():
-    filter_ = {"property": "Ativo", "checkbox": {"equals": True}}
-    results = _query(DS_PUSH, filter_=filter_)
-    out = []
-    for p in results:
-        chaves_raw = _prop(p, "Chaves", "text")
-        try:
-            keys = json.loads(chaves_raw) if chaves_raw else {}
-        except (TypeError, ValueError):
-            keys = {}
-        out.append({
-            "page_id": p["id"],
-            "endpoint": _prop(p, "Endpoint", "text"),
-            "keys": keys,
-        })
-    return out
-
-
-def add_push_subscription(subscription_info: dict):
-    endpoint = subscription_info.get("endpoint", "")
-    keys = subscription_info.get("keys", {})
-    # evita duplicados: se já existir este endpoint, não cria outro
-    existentes = _query(DS_PUSH, filter_={"property": "Endpoint", "rich_text": {"equals": endpoint}})
-    if existentes:
-        return existentes[0]
-    properties = {
-        "Nome": {"title": [{"text": {"content": f"Subscrição {endpoint[-12:]}"}}]},
-        "Endpoint": {"rich_text": [{"text": {"content": endpoint}}]},
-        "Chaves": {"rich_text": [{"text": {"content": json.dumps(keys)}}]},
-        "Ativo": {"checkbox": True},
-    }
-    return _create_page(DS_PUSH, properties)
-
-
-def delete_push_subscription(endpoint):
-    results = _query(DS_PUSH, filter_={"property": "Endpoint", "rich_text": {"equals": endpoint}})
-    for p in results:
-        _delete_page(p["id"])
-
-
-# ---------- RECEITAS PERSONALIZADAS ----------
-
-def _receita_from_page(p):
-    ingredientes_raw = _prop(p, "Ingredientes", "text") or ""
-    preparo_raw = _prop(p, "Preparo", "text") or ""
-    chave_raw = _prop(p, "Chave Despensa", "text") or ""
-    return {
-        "page_id": p["id"],
-        "nome": _prop(p, "Nome", "title") or "",
-        "ingredientes": [l for l in ingredientes_raw.split("\n") if l.strip()],
-        "preparo": [l for l in preparo_raw.split("\n") if l.strip()],
-        "chave_despensa": [c.strip() for c in chave_raw.split(",") if c.strip()],
-        "kcal": _prop(p, "Kcal", "number") or 0,
-        "proteina_g": _prop(p, "Proteina g", "number") or 0,
-        "hidratos_g": _prop(p, "Hidratos g", "number") or 0,
-        "gordura_g": _prop(p, "Gordura g", "number") or 0,
-        "tags": [],
-    }
-
-
-def get_custom_recipes():
-    results = _query(DS_RECEITAS_CUSTOM)
-    return [_receita_from_page(p) for p in results]
-
-
-def get_custom_recipe(page_id):
-    url = f"{BASE_URL}/pages/{page_id}"
-    r = requests.get(url, headers=_headers(), timeout=15)
-    r.raise_for_status()
-    return _receita_from_page(r.json())
-
-
-def update_custom_recipe(page_id, nome, ingredientes, preparo, chave_despensa, kcal, proteina_g, hidratos_g, gordura_g):
-    properties = {
-        "Nome": {"title": [{"text": {"content": nome}}]},
-        "Ingredientes": {"rich_text": [{"text": {"content": "\n".join(ingredientes)[:1900]}}]},
-        "Preparo": {"rich_text": [{"text": {"content": "\n".join(preparo)[:1900]}}]},
-        "Chave Despensa": {"rich_text": [{"text": {"content": ", ".join(chave_despensa)[:1900]}}]},
-        "Kcal": {"number": round(kcal, 1)},
-        "Proteina g": {"number": round(proteina_g, 1)},
-        "Hidratos g": {"number": round(hidratos_g, 1)},
-        "Gordura g": {"number": round(gordura_g, 1)},
-    }
-    return _update_page(page_id, properties)
-
-
-def add_custom_recipe(nome, ingredientes, preparo, chave_despensa, kcal, proteina_g, hidratos_g, gordura_g):
-    properties = {
-        "Nome": {"title": [{"text": {"content": nome}}]},
-        "Ingredientes": {"rich_text": [{"text": {"content": "\n".join(ingredientes)[:1900]}}]},
-        "Preparo": {"rich_text": [{"text": {"content": "\n".join(preparo)[:1900]}}]},
-        "Chave Despensa": {"rich_text": [{"text": {"content": ", ".join(chave_despensa)[:1900]}}]},
-        "Kcal": {"number": round(kcal, 1)},
-        "Proteina g": {"number": round(proteina_g, 1)},
-        "Hidratos g": {"number": round(hidratos_g, 1)},
-        "Gordura g": {"number": round(gordura_g, 1)},
-    }
-    return _create_page(DS_RECEITAS_CUSTOM, properties)
-
-
-def delete_custom_recipe(page_id):
-    return _delete_page(page_id)

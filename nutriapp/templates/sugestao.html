@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Sugestão{% endblock %}
+{% block content %}
+<h1>🤖 O que posso comer agora?</h1>
+
+<div class="assistant-box">
+  <p style="margin:0;">
+    Ainda tens <strong>{{ restante_kcal }} kcal</strong> e <strong>{{ restante_prot }}g de proteína</strong> disponíveis hoje.
+  </p>
+</div>
+
+<div class="card" style="font-size:0.85rem;">
+  <strong>Como escolho estas receitas:</strong>
+  <ol style="padding-left:18px; margin:8px 0 0;">
+    <li>Lista de 54 receitas portuguesas/mediterrânicas, escritas por nós — sempre em português.</li>
+    <li>Só aparecem receitas que já dás mesmo para fazer: tens tudo, ou falta só 1 ingrediente.</li>
+    <li>Ignoro por completo receitas com alimentos que marcaste como "não gosto".</li>
+  </ol>
+</div>
+
+{% macro receita_card(s) %}
+  {% set r = s.receita %}
+  <div class="card">
+    <h2>🍽️ {{ r.nome }}</h2>
+    <div class="macro-grid" style="margin-bottom:14px;">
+      <div class="macro-box"><div class="value">🔥 {{ r.kcal }}</div><div class="label">kcal</div></div>
+      <div class="macro-box"><div class="value">🥩 {{ r.proteina_g }}g</div><div class="label">proteína</div></div>
+      <div class="macro-box"><div class="value">🍚 {{ r.hidratos_g }}g</div><div class="label">hidratos</div></div>
+      <div class="macro-box"><div class="value">🥑 {{ r.gordura_g }}g</div><div class="label">gordura</div></div>
+    </div>
+
+    <h2>Ingredientes</h2>
+    <ul class="item-list">
+      {% for ing in r.ingredientes %}
+        <li><span>{{ ing }}</span></li>
+      {% endfor %}
+    </ul>
+
+    <h2 style="margin-top:14px;">Preparo</h2>
+    <ol style="padding-left:20px; margin:0;">
+      {% for passo in r.preparo %}
+        <li style="margin-bottom:6px;">{{ passo }}</li>
+      {% endfor %}
+    </ol>
+
+    {% if s.faltam|length == 0 %}
+      <p class="subtitle" style="font-size:0.85rem; margin-top:12px; color:var(--green);">✅ Já tens tudo o que precisas em casa.</p>
+    {% else %}
+      <p class="subtitle" style="font-size:0.85rem; margin-top:12px;">🛒 Só falta: {{ s.faltam|join(', ') }}</p>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+<h2 style="margin: 20px 0 4px;">✅ Prontas a fazer</h2>
+{% for s in receitas_prontas %}
+  {{ receita_card(s) }}
+{% else %}
+  <div class="card"><p class="subtitle">Ainda não tens tudo para nenhuma receita. Adiciona mais alimentos à Despensa.</p></div>
+{% endfor %}
+
+<h2 style="margin: 24px 0 4px;">✨ Quase lá!</h2>
+<p class="subtitle" style="margin-top:0;">Só te falta comprar 1 ingrediente para cada uma destas.</p>
+{% for s in receitas_quase %}
+  {{ receita_card(s) }}
+{% else %}
+  <div class="card"><p class="subtitle">Nada aqui por agora.</p></div>
+{% endfor %}
+
+<div class="card">
+  <h2>➕ Adicionar à despensa</h2>
+  <form method="post" class="two-col" style="align-items:end;">
+    <input type="hidden" name="acao" value="add_pantry">
+    <div class="field">
+      <label>Alimento</label>
+      <input type="text" name="nome" placeholder="ex: frango" required>
+    </div>
+    <div class="field">
+      <label>Quantidade (opcional)</label>
+      <input type="text" name="quantidade" placeholder="ex: 500g">
+    </div>
+    <button class="btn" type="submit" style="grid-column: 1 / -1;">Adicionar</button>
+  </form>
+  <p class="subtitle" style="font-size:0.85rem; margin-top:10px;">
+    Tens {{ pantry|length }} item(ns) na despensa. <a href="{{ url_for('despensa') }}">Gerir despensa →</a>
+  </p>
+</div>
+
+<div class="card">
+  <h2>🚫 Não gosto / não quero ver</h2>
+  <p class="subtitle" style="margin-bottom:10px;">Alimentos aqui deixam de aparecer em qualquer sugestão.</p>
+  <form method="post" class="two-col" style="align-items:end;">
+    <input type="hidden" name="acao" value="add_excluido">
+    <div class="field">
+      <label>Alimento a excluir</label>
+      <input type="text" name="nome_excluido" placeholder="ex: brocolos" required>
+    </div>
+    <button class="btn btn-danger" type="submit">Excluir</button>
+  </form>
+
+  {% if excluidos %}
+  <ul class="meal-list" style="margin-top:12px;">
+    {% for e in excluidos %}
+      <li>
+        <span class="meal-name">{{ e.nome }}</span>
+        <form method="post" action="{{ url_for('remover_excluido', page_id=e.page_id) }}">
+          <button class="btn btn-sm btn-outline" type="submit">Voltar a permitir</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endblock %}

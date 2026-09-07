@@ -14,20 +14,6 @@
   <p style="margin:6px 0 0; font-size:0.9rem;">{{ plano.mensagem }}</p>
 </div>
 
-{% if active_exercise %}
-  <div class="card" style="border:2px solid var(--primary, #2e7d32);">
-    <h2>⏱️ Treino em curso</h2>
-    <p class="subtitle">{{ active_exercise.nome }} — iniciado às {{ active_exercise.inicio[11:16] if active_exercise.inicio and active_exercise.inicio|length > 15 else active_exercise.inicio }}</p>
-    <form method="post" action="{{ url_for('finalizar_exercicio', page_id=active_exercise.page_id) }}" style="margin-top:10px;">
-      <div class="field">
-        <label>Calorias estimadas (opcional)</label>
-        <input type="number" name="kcal_estimadas">
-      </div>
-      <button class="btn" type="submit">🏁 Finalizar treino</button>
-    </form>
-  </div>
-{% endif %}
-
 {% if modo == 'diario' %}
   <div class="card">
     <h2>{{ plano.workout.titulo }}</h2>
@@ -41,18 +27,10 @@
       {% endfor %}
     </ul>
 
-    {% if not active_exercise %}
-    <div class="two-col" style="margin-top:14px;">
-      <form method="post" action="{{ url_for('iniciar_exercicio') }}">
-        <input type="hidden" name="nome" value="{{ plano.workout.titulo }}">
-        <button class="btn btn-outline" type="submit">⏱️ Iniciar treino</button>
-      </form>
-      <form method="post">
-        <input type="hidden" name="nome" value="{{ plano.workout.titulo }}">
-        <button class="btn" type="submit">Concluí este treino ✅</button>
-      </form>
-    </div>
-    {% endif %}
+    <form method="post" style="margin-top:14px;">
+      <input type="hidden" name="nome" value="{{ plano.workout.titulo }}">
+      <button class="btn" type="submit">Concluí este treino ✅</button>
+    </form>
   </div>
 {% else %}
   <div class="card">
@@ -84,11 +62,10 @@
 
 <div class="card">
   <h2>Registar outro treino</h2>
-  <p class="subtitle" style="font-size:0.85rem;">Escreve a duração manualmente, ou usa "Iniciar treino" para eu cronometrar automaticamente.</p>
   <form method="post">
     <div class="field">
       <label>O que treinaste?</label>
-      <input type="text" name="nome" id="nome-manual" placeholder="ex: Corrida 5km" required>
+      <input type="text" name="nome" placeholder="ex: Corrida 5km" required>
     </div>
     <div class="two-col">
       <div class="field">
@@ -100,14 +77,8 @@
         <input type="number" name="kcal_estimadas">
       </div>
     </div>
-    <button class="btn btn-outline" type="submit">Registar com duração já sabida</button>
+    <button class="btn btn-outline" type="submit">Registar</button>
   </form>
-  {% if not active_exercise %}
-  <form method="post" action="{{ url_for('iniciar_exercicio') }}" style="margin-top:10px;" onsubmit="document.getElementById('nome-hidden-manual').value = document.getElementById('nome-manual').value || 'Treino'; return true;">
-    <input type="hidden" name="nome" id="nome-hidden-manual" value="Treino">
-    <button class="btn" type="submit">⏱️ Iniciar treino agora</button>
-  </form>
-  {% endif %}
 </div>
 
 <div class="card">

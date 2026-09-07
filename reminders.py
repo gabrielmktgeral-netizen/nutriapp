@@ -67,6 +67,8 @@ def verificar_lembretes():
         hora_str = profile.get(campo_hora)
         if not hora_str or tipo in meals_hoje:
             continue
+        if profile.get(f"pular_lembrete_{tipo}"):
+            continue
         minutos = _minutos_desde(hora_str, agora)
         if minutos is not None and 30 <= minutos <= 90:
             chave = (hoje, tipo)

@@ -4,7 +4,7 @@ testar a app no PC sem ligar o Notion. Mesma 'interface' que notion_db.py."""
 import json
 import os
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 DATA_FILE = os.path.join(DATA_DIR, "local_db.json")
@@ -173,6 +173,45 @@ def add_exercise(data_iso, nome, duracao_min=None, kcal_estimadas=None):
 def get_exercise_between(start_iso, end_iso):
     data = _load()
     return [e for e in data["exercises"] if start_iso <= e["data"] <= end_iso]
+
+
+def start_exercise(nome):
+    data = _load()
+    item = {
+        "page_id": str(uuid.uuid4()), "data": date.today().isoformat(), "nome": nome,
+        "duracao_min": None, "kcal_estimadas": None,
+        "inicio": datetime.now().isoformat(), "fim": None,
+    }
+    data["exercises"].append(item)
+    _save(data)
+    return item
+
+
+def get_active_exercise():
+    data = _load()
+    for e in data["exercises"]:
+        if e.get("inicio") and not e.get("fim"):
+            return {"page_id": e["page_id"], "nome": e["nome"], "inicio": e["inicio"]}
+    return None
+
+
+def finish_exercise(page_id, kcal_estimadas=None):
+    data = _load()
+    for e in data["exercises"]:
+        if e["page_id"] == page_id:
+            agora = datetime.now()
+            e["fim"] = agora.isoformat()
+            if e.get("inicio"):
+                try:
+                    inicio_dt = datetime.fromisoformat(e["inicio"])
+                    e["duracao_min"] = max(1, round((agora - inicio_dt).total_seconds() / 60))
+                except (ValueError, TypeError):
+                    pass
+            if kcal_estimadas is not None:
+                e["kcal_estimadas"] = kcal_estimadas
+            _save(data)
+            return e
+    return None
 
 
 # ---------- NOTIFICAÇÕES PUSH ----------
