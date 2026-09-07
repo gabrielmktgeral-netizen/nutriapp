@@ -20,6 +20,10 @@
   <button class="btn" type="submit">Calcular e guardar</button>
 </form>
 
+<form method="post" action="{{ url_for('nao_comi', tipo=tipo_padrao) }}">
+  <button type="submit" class="btn btn-secondary">Não comi nada nesta refeição</button>
+</form>
+
 {% if resultado %}
 <div class="card">
   <h2>Resultado</h2>

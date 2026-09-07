@@ -3,23 +3,50 @@
 {% block content %}
 <h1>🏋️ Exercício</h1>
 
-<form method="post" class="card">
-  <div class="field">
-    <label>O que treinaste?</label>
-    <input type="text" name="nome" placeholder="ex: Treino de pernas" required>
-  </div>
-  <div class="two-col">
+{% if workout %}
+<div class="assistant-box">
+  <strong>🤖 Sugestão para o teu objetivo</strong>
+  {% if goal_label %}<p style="margin:4px 0 0; font-size:0.9rem;">{{ goal_label }}</p>{% endif %}
+</div>
+
+<div class="card">
+  <h2>{{ workout.titulo }}</h2>
+  <p class="subtitle">⏱️ {{ workout.duracao }}</p>
+  <ul class="item-list">
+    {% for ex in workout.exercicios %}
+      <li><span>{{ ex }}</span></li>
+    {% endfor %}
+  </ul>
+
+  <form method="post" style="margin-top:14px;">
+    <input type="hidden" name="nome" value="{{ workout.titulo }}">
+    <input type="hidden" name="duracao_min" value="">
+    <input type="hidden" name="kcal_estimadas" value="">
+    <button class="btn" type="submit">Concluí este treino ✅</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Registar outro treino</h2>
+  <form method="post">
     <div class="field">
-      <label>Duração (min)</label>
-      <input type="number" name="duracao_min">
+      <label>O que treinaste?</label>
+      <input type="text" name="nome" placeholder="ex: Corrida 5km" required>
     </div>
-    <div class="field">
-      <label>Calorias estimadas</label>
-      <input type="number" name="kcal_estimadas">
+    <div class="two-col">
+      <div class="field">
+        <label>Duração (min)</label>
+        <input type="number" name="duracao_min">
+      </div>
+      <div class="field">
+        <label>Calorias estimadas</label>
+        <input type="number" name="kcal_estimadas">
+      </div>
     </div>
-  </div>
-  <button class="btn" type="submit">Registar treino</button>
-</form>
+    <button class="btn btn-outline" type="submit">Registar</button>
+  </form>
+</div>
 
 <div class="card">
   <h2>Esta semana</h2>

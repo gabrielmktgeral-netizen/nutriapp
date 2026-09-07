@@ -10,12 +10,10 @@
   <nav class="topnav">
     <a href="{{ url_for('index') }}" class="brand">🥗 NutriApp</a>
     <div class="nav-links">
-      <a href="{{ url_for('index') }}">Hoje</a>
-      <a href="{{ url_for('despensa') }}">Despensa</a>
-      <a href="{{ url_for('sugestao') }}">Sugestão</a>
-      <a href="{{ url_for('exercicio') }}">Exercício</a>
-      <a href="{{ url_for('peso') }}">Peso</a>
-      <a href="{{ url_for('onboarding') }}">Perfil</a>
+      <a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint=='index' }}">Hoje</a>
+      <a href="{{ url_for('sugestao') }}" class="{{ 'active' if request.endpoint=='sugestao' }}">Sugestão</a>
+      <a href="{{ url_for('exercicio') }}" class="{{ 'active' if request.endpoint=='exercicio' }}">Exercício</a>
+      <a href="{{ url_for('onboarding') }}" class="{{ 'active' if request.endpoint in ['onboarding','despensa'] }}">Perfil</a>
     </div>
   </nav>
 

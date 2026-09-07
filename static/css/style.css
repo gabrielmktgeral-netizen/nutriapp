@@ -21,20 +21,39 @@ body {
 
 .topnav {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
   padding: 12px 20px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
   gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .brand { font-weight: 700; font-size: 1.2rem; text-decoration: none; color: var(--text); }
 
-.nav-links { display: flex; gap: 14px; flex-wrap: wrap; }
-.nav-links a { text-decoration: none; color: var(--muted); font-size: 0.95rem; }
+.nav-links {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 480px;
+}
+.nav-links a {
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  flex: 1;
+  text-align: center;
+  min-width: 70px;
+}
 .nav-links a:hover { color: var(--green); }
+.nav-links a.active { background: var(--green-light); color: var(--green); font-weight: 600; }
 
 .container { max-width: 720px; margin: 0 auto; padding: 20px 16px 60px; }
 

@@ -7,6 +7,8 @@ import data_store as db
 import nutrition_calc as nc
 from meal_parser import parse_meal_text
 from food_data import lookup as food_lookup
+from recipes import sugerir_receitas
+from workouts import get_workout_for_goal
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-troca-isto")
@@ -125,6 +127,13 @@ def registar_refeicao():
                             meal_labels=nc.MEAL_LABELS, resultado=resultado)
 
 
+@app.route("/nao-comi/<tipo>", methods=["POST"])
+def nao_comi(tipo):
+    db.add_meal(date.today().isoformat(), tipo, "Não comi nada", 0, 0, 0, 0)
+    flash("Registado — sem problema, fica marcado.", "success")
+    return redirect(url_for("index"))
+
+
 @app.route("/despensa", methods=["GET", "POST"])
 def despensa():
     if request.method == "POST":
@@ -146,8 +155,16 @@ def remover_despensa(page_id):
     return redirect(url_for("despensa"))
 
 
-@app.route("/sugestao")
+@app.route("/sugestao", methods=["GET", "POST"])
 def sugestao():
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        quantidade = request.form.get("quantidade", "").strip()
+        if nome:
+            db.add_pantry_item(nome, quantidade)
+            flash(f"'{nome}' adicionado à despensa.", "success")
+        return redirect(url_for("sugestao"))
+
     profile = db.get_profile()
     targets = nc.macro_targets(profile) if profile else None
     today_iso = date.today().isoformat()
@@ -159,34 +176,17 @@ def sugestao():
     restante_prot = round((targets["protein_g"] if targets else 0) - consumido_prot)
 
     pantry = db.get_pantry()
-    sugestoes = []
-    for item in pantry:
-        vals = food_lookup(item["nome"])
-        if vals:
-            kcal100, prot100, carb100, fat100 = vals
-            sugestoes.append({"nome": item["nome"], "kcal_100g": kcal100, "proteina_100g": prot100})
-    # ordena por mais proteína por caloria, prioriza quem ajuda a fechar o objetivo de proteína
-    sugestoes.sort(key=lambda x: -(x["proteina_100g"] / max(x["kcal_100g"], 1)))
+    pantry_nomes = [p["nome"] for p in pantry]
+    receitas_sugeridas = sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, top_n=3)
 
     return render_template("sugestao.html", restante_kcal=restante_kcal, restante_prot=restante_prot,
-                            sugestoes=sugestoes[:6], pantry=pantry)
-
-
-@app.route("/peso", methods=["GET", "POST"])
-def peso():
-    if request.method == "POST":
-        peso_kg = float(request.form["peso_kg"])
-        db.add_weight(date.today().isoformat(), peso_kg)
-        db.save_profile({**db.get_profile(), "peso_kg": peso_kg})
-        flash("Peso registado.", "success")
-        return redirect(url_for("peso"))
-
-    history = db.get_weight_history(20) if db.configured() else []
-    return render_template("peso.html", history=history)
+                            receitas_sugeridas=receitas_sugeridas, pantry=pantry)
 
 
 @app.route("/exercicio", methods=["GET", "POST"])
 def exercicio():
+    profile = db.get_profile()
+
     if request.method == "POST":
         nome = request.form.get("nome", "").strip()
         duracao = request.form.get("duracao_min")
@@ -197,13 +197,16 @@ def exercicio():
                 int(duracao) if duracao else None,
                 int(kcal) if kcal else None,
             )
-            flash("Exercício registado! 💪", "success")
+            flash("Treino registado! 💪", "success")
         return redirect(url_for("exercicio"))
+
+    workout = get_workout_for_goal(profile.get("objetivo")) if profile else None
+    goal_label = nc.GOAL_LABELS.get(profile.get("objetivo"), "") if profile else ""
 
     today = date.today()
     monday, sunday = week_bounds(today)
     week_ex = db.get_exercise_between(monday.isoformat(), sunday.isoformat()) if db.configured() else []
-    return render_template("exercicio.html", week_ex=week_ex)
+    return render_template("exercicio.html", week_ex=week_ex, workout=workout, goal_label=goal_label)
 
 
 if __name__ == "__main__":

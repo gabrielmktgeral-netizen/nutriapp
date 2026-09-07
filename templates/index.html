@@ -46,9 +46,16 @@
         <span class="meal-status">{{ '✅' if meal else '⚪' }}</span>
         <span class="meal-name">{{ info[0] }} {{ info[1] }}</span>
         {% if meal %}
-          <span class="meal-kcal">{{ meal.kcal|round|int }} kcal</span>
+          {% if meal.texto_original == 'Não comi nada' %}
+            <span class="meal-kcal">não comeste</span>
+          {% else %}
+            <span class="meal-kcal">{{ meal.kcal|round|int }} kcal</span>
+          {% endif %}
         {% else %}
           <a class="btn btn-sm btn-outline" href="{{ url_for('registar_refeicao', tipo=tipo) }}">Registar</a>
+          <form method="post" action="{{ url_for('nao_comi', tipo=tipo) }}" style="display:inline;">
+            <button type="submit" class="btn btn-sm btn-secondary" style="margin-left:6px;">Não comi</button>
+          </form>
         {% endif %}
       </li>
     {% endfor %}
