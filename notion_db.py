@@ -12,6 +12,7 @@ DS_REFEICOES = "02e052d2-9ff1-4f7e-a5ad-28dc7d5d0233"
 DS_DESPENSA = "257fb7a6-e34a-49b2-8a3b-ec21aec0ff05"
 DS_PESO = "8952c054-bfb7-4f3f-8920-0876a84e82b1"
 DS_EXERCICIO = "818ab87d-0b92-46fb-ab11-e60b522b514d"
+DS_EXCLUIDOS = "3c33ec21-6415-4cbf-bea8-b73344b47112"
 
 
 def _headers():
@@ -191,6 +192,22 @@ def add_pantry_item(nome, quantidade=""):
 
 
 def delete_pantry_item(page_id):
+    return _delete_page(page_id)
+
+
+# ---------- EXCLUÍDOS (alimentos que o utilizador não quer nas sugestões) ----------
+
+def get_excluidos():
+    results = _query(DS_EXCLUIDOS)
+    return [{"page_id": p["id"], "nome": _prop(p, "Nome", "title")} for p in results]
+
+
+def add_excluido(nome):
+    properties = {"Nome": {"title": [{"text": {"content": nome}}]}}
+    return _create_page(DS_EXCLUIDOS, properties)
+
+
+def delete_excluido(page_id):
     return _delete_page(page_id)
 
 

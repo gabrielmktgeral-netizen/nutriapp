@@ -109,12 +109,21 @@ RECIPES = [
 ]
 
 
-def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, top_n=3):
-    """Pontua receitas por: quantos ingredientes já tens em casa + se cabem no que falta hoje."""
+def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=None, top_n=3):
+    """Pontua receitas por: quantos ingredientes já tens em casa + se cabem no que falta hoje.
+    Receitas que contenham um alimento excluído pelo utilizador são descartadas por completo."""
     pantry_lower = [p.lower() for p in pantry_nomes]
+    excluidos_lower = [e.lower() for e in (excluidos_nomes or [])]
 
     scored = []
     for r in RECIPES:
+        tem_excluido = any(
+            any(exc in chave or chave in exc for chave in r["chave_despensa"])
+            for exc in excluidos_lower
+        )
+        if tem_excluido:
+            continue
+
         match_count = sum(1 for chave in r["chave_despensa"] if any(chave in p or p in chave for p in pantry_lower))
         cabe_kcal = r["kcal"] <= max(restante_kcal, 1) * 1.3  # alguma tolerância
         ajuda_proteina = r["proteina_g"] >= (restante_prot * 0.25 if restante_prot > 0 else 0)

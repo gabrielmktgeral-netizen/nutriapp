@@ -8,10 +8,13 @@ import nutrition_calc as nc
 from meal_parser import parse_meal_text
 from food_data import lookup as food_lookup
 from recipes import sugerir_receitas
-from workouts import get_workout_for_goal
+from workouts import get_workout_for_goal, youtube_search_url
+from food_translate import to_english
+from external_recipes import buscar_receitas_dinamicas
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-troca-isto")
+app.jinja_env.filters["youtube_url"] = youtube_search_url
 
 DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 
@@ -158,11 +161,18 @@ def remover_despensa(page_id):
 @app.route("/sugestao", methods=["GET", "POST"])
 def sugestao():
     if request.method == "POST":
-        nome = request.form.get("nome", "").strip()
-        quantidade = request.form.get("quantidade", "").strip()
-        if nome:
-            db.add_pantry_item(nome, quantidade)
-            flash(f"'{nome}' adicionado à despensa.", "success")
+        acao = request.form.get("acao", "add_pantry")
+        if acao == "add_excluido":
+            nome = request.form.get("nome_excluido", "").strip()
+            if nome:
+                db.add_excluido(nome)
+                flash(f"'{nome}' não vai voltar a ser sugerido.", "success")
+        else:
+            nome = request.form.get("nome", "").strip()
+            quantidade = request.form.get("quantidade", "").strip()
+            if nome:
+                db.add_pantry_item(nome, quantidade)
+                flash(f"'{nome}' adicionado à despensa.", "success")
         return redirect(url_for("sugestao"))
 
     profile = db.get_profile()
@@ -177,10 +187,28 @@ def sugestao():
 
     pantry = db.get_pantry()
     pantry_nomes = [p["nome"] for p in pantry]
-    receitas_sugeridas = sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, top_n=3)
+    excluidos = db.get_excluidos()
+    excluidos_nomes = [e["nome"] for e in excluidos]
+
+    # receitas dinâmicas (API pública TheMealDB, em tempo real)
+    pantry_en = [en for en in (to_english(n) for n in pantry_nomes) if en]
+    excluidos_en = [en for en in (to_english(n) for n in excluidos_nomes) if en]
+    receitas_dinamicas = buscar_receitas_dinamicas(pantry_en, excluidos_en, limite=3)
+
+    # receitas locais fixas, como reserva caso a API esteja indisponível
+    receitas_sugeridas = sugerir_receitas(pantry_nomes, restante_kcal, restante_prot,
+                                          excluidos_nomes=excluidos_nomes, top_n=3)
 
     return render_template("sugestao.html", restante_kcal=restante_kcal, restante_prot=restante_prot,
-                            receitas_sugeridas=receitas_sugeridas, pantry=pantry)
+                            receitas_dinamicas=receitas_dinamicas, receitas_sugeridas=receitas_sugeridas,
+                            pantry=pantry, excluidos=excluidos)
+
+
+@app.route("/sugestao/excluidos/remover/<page_id>", methods=["POST"])
+def remover_excluido(page_id):
+    db.delete_excluido(page_id)
+    flash("Removido da lista de excluídos.", "success")
+    return redirect(url_for("sugestao"))
 
 
 @app.route("/exercicio", methods=["GET", "POST"])

@@ -1,4 +1,6 @@
 """Sugestões de treino baseadas no objetivo escolhido no perfil."""
+import re
+from urllib.parse import quote_plus
 
 WORKOUTS_BY_GOAL = {
     "perder_peso": {
@@ -80,3 +82,21 @@ WORKOUTS_BY_GOAL = {
 
 def get_workout_for_goal(objetivo):
     return WORKOUTS_BY_GOAL.get(objetivo, WORKOUTS_BY_GOAL["manter_peso"])
+
+
+_PREFIX_RE = re.compile(r"^\s*\d+x[\d\-]+\s*", flags=re.IGNORECASE)
+_PAREN_RE = re.compile(r"\(.*?\)")
+
+
+def nome_exercicio_limpo(texto_exercicio: str) -> str:
+    """Remove '3x10 ' e parênteses, deixando só o nome do exercício, para pesquisar um vídeo."""
+    t = _PREFIX_RE.sub("", texto_exercicio)
+    t = _PAREN_RE.sub("", t)
+    t = t.split(" ou ")[0]  # fica só com a primeira opção quando há alternativa
+    return t.strip(" .")
+
+
+def youtube_search_url(texto_exercicio: str) -> str:
+    nome = nome_exercicio_limpo(texto_exercicio)
+    query = quote_plus(f"como fazer {nome} técnica correta")
+    return f"https://www.youtube.com/results?search_query={query}"

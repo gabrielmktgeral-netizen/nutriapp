@@ -9,6 +9,47 @@
   </p>
 </div>
 
+<div class="card" style="font-size:0.85rem;">
+  <strong>Como escolho estas receitas:</strong>
+  <ol style="padding-left:18px; margin:8px 0 0;">
+    <li>Vou buscar receitas reais a uma base de dados online gratuita (TheMealDB), pesquisando pelo que tens na Despensa.</li>
+    <li>Vejo o que ainda falta hoje (kcal e proteína) — nas receitas fixas de reserva, prioriza as que ajudam a fechar a proteína.</li>
+    <li>Ignoro por completo receitas com alimentos que marcaste como "não gosto".</li>
+  </ol>
+  <p style="margin:8px 0 0; color:var(--muted);">As receitas são traduzidas automaticamente para português — a tradução pode não ficar perfeita em todas as frases.</p>
+</div>
+
+{% if receitas_dinamicas %}
+  <h2 style="margin: 20px 0 4px;">🌐 Receitas encontradas para ti</h2>
+  {% for s in receitas_dinamicas %}
+    {% set r = s.receita %}
+    <div class="card">
+      {% if r.imagem %}<img src="{{ r.imagem }}" alt="{{ r.nome }}" style="width:100%; border-radius:10px; margin-bottom:12px;">{% endif %}
+      <h2>🍽️ {{ r.nome }}</h2>
+
+      <h2 style="margin-top:14px;">Ingredientes</h2>
+      <ul class="item-list">
+        {% for ing in r.ingredientes %}
+          <li><span>{{ ing }}</span></li>
+        {% endfor %}
+      </ul>
+
+      <h2 style="margin-top:14px;">Preparo</h2>
+      <ol style="padding-left:20px; margin:0;">
+        {% for passo in r.preparo %}
+          <li style="margin-bottom:6px;">{{ passo }}</li>
+        {% endfor %}
+      </ol>
+
+      {% if s.match_count > 0 %}
+        <p class="subtitle" style="font-size:0.85rem; margin-top:12px;">✅ Cruza com {{ s.match_count }} alimento(s) da tua despensa.</p>
+      {% endif %}
+      <a href="{{ r.fonte_url }}" target="_blank" rel="noopener" class="subtitle" style="font-size:0.8rem;">Ver receita original →</a>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<h2 style="margin: 20px 0 4px;">📌 Receitas fixas (reserva, sempre disponíveis)</h2>
 {% for s in receitas_sugeridas %}
   {% set r = s.receita %}
   <div class="card">
@@ -45,6 +86,7 @@
 <div class="card">
   <h2>➕ Adicionar à despensa</h2>
   <form method="post" class="two-col" style="align-items:end;">
+    <input type="hidden" name="acao" value="add_pantry">
     <div class="field">
       <label>Alimento</label>
       <input type="text" name="nome" placeholder="ex: frango" required>
@@ -58,5 +100,31 @@
   <p class="subtitle" style="font-size:0.85rem; margin-top:10px;">
     Tens {{ pantry|length }} item(ns) na despensa. <a href="{{ url_for('despensa') }}">Gerir despensa →</a>
   </p>
+</div>
+
+<div class="card">
+  <h2>🚫 Não gosto / não quero ver</h2>
+  <p class="subtitle" style="margin-bottom:10px;">Alimentos aqui deixam de aparecer em qualquer sugestão.</p>
+  <form method="post" class="two-col" style="align-items:end;">
+    <input type="hidden" name="acao" value="add_excluido">
+    <div class="field">
+      <label>Alimento a excluir</label>
+      <input type="text" name="nome_excluido" placeholder="ex: brocolos" required>
+    </div>
+    <button class="btn btn-danger" type="submit">Excluir</button>
+  </form>
+
+  {% if excluidos %}
+  <ul class="meal-list" style="margin-top:12px;">
+    {% for e in excluidos %}
+      <li>
+        <span class="meal-name">{{ e.nome }}</span>
+        <form method="post" action="{{ url_for('remover_excluido', page_id=e.page_id) }}">
+          <button class="btn btn-sm btn-outline" type="submit">Voltar a permitir</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
 </div>
 {% endblock %}

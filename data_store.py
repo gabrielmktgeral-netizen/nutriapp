@@ -14,6 +14,7 @@ if USING_NOTION:
         configured, get_profile, save_profile,
         add_meal, get_meals_between, get_meals_for_day,
         get_pantry, add_pantry_item, delete_pantry_item,
+        get_excluidos, add_excluido, delete_excluido,
         add_weight, get_weight_history,
         add_exercise, get_exercise_between,
     )
@@ -23,6 +24,7 @@ else:
         configured, get_profile, save_profile,
         add_meal, get_meals_between, get_meals_for_day,
         get_pantry, add_pantry_item, delete_pantry_item,
+        get_excluidos, add_excluido, delete_excluido,
         add_weight, get_weight_history,
         add_exercise, get_exercise_between,
     )

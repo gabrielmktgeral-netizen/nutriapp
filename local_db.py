@@ -9,7 +9,7 @@ from datetime import date
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 DATA_FILE = os.path.join(DATA_DIR, "local_db.json")
 
-_EMPTY = {"profile": None, "meals": [], "pantry": [], "weights": [], "exercises": []}
+_EMPTY = {"profile": None, "meals": [], "pantry": [], "weights": [], "exercises": [], "excluidos": []}
 
 
 def configured():
@@ -90,6 +90,26 @@ def add_pantry_item(nome, quantidade=""):
 def delete_pantry_item(page_id):
     data = _load()
     data["pantry"] = [p for p in data["pantry"] if p["page_id"] != page_id]
+    _save(data)
+
+
+# ---------- EXCLUÍDOS ----------
+
+def get_excluidos():
+    return _load()["excluidos"]
+
+
+def add_excluido(nome):
+    data = _load()
+    item = {"page_id": str(uuid.uuid4()), "nome": nome}
+    data["excluidos"].append(item)
+    _save(data)
+    return item
+
+
+def delete_excluido(page_id):
+    data = _load()
+    data["excluidos"] = [e for e in data["excluidos"] if e["page_id"] != page_id]
     _save(data)
 
 

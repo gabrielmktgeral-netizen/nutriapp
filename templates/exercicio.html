@@ -14,9 +14,15 @@
   <p class="subtitle">⏱️ {{ workout.duracao }}</p>
   <ul class="item-list">
     {% for ex in workout.exercicios %}
-      <li><span>{{ ex }}</span></li>
+      <li>
+        <span>{{ ex }}</span>
+        <a href="{{ ex|youtube_url }}" target="_blank" rel="noopener" class="tag" style="text-decoration:none;">▶️ Ver como fazer</a>
+      </li>
     {% endfor %}
   </ul>
+  <p class="subtitle" style="font-size:0.8rem; margin-top:6px;">
+    Os links abrem uma pesquisa no YouTube com a técnica correta de cada exercício.
+  </p>
 
   <form method="post" style="margin-top:14px;">
     <input type="hidden" name="nome" value="{{ workout.titulo }}">
