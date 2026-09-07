@@ -88,14 +88,16 @@ h1, h2, .brand { font-family: 'Poppins', 'Inter', sans-serif; }
 .nav-links a {
   text-decoration: none;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
-  padding: 7px 14px;
+  padding: 7px 13px;
   border-radius: 20px;
-  flex: 1;
   text-align: center;
-  min-width: 60px;
+  white-space: nowrap;
   transition: all 0.2s ease;
+}
+@media (max-width: 400px) {
+  .nav-links a { font-size: 0.8rem; padding: 6px 10px; }
 }
 .nav-links a:hover { color: var(--green-dark); background: var(--green-light); transform: translateY(-1px); }
 .nav-links a.active {
