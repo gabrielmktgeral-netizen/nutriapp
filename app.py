@@ -9,8 +9,6 @@ from meal_parser import parse_meal_text
 from food_data import lookup as food_lookup
 from recipes import sugerir_receitas
 from workouts import get_workout_for_goal, youtube_search_url
-from food_translate import to_english
-from external_recipes import buscar_receitas_dinamicas
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-troca-isto")
@@ -190,17 +188,11 @@ def sugestao():
     excluidos = db.get_excluidos()
     excluidos_nomes = [e["nome"] for e in excluidos]
 
-    # receitas dinâmicas (API pública TheMealDB, em tempo real)
-    pantry_en = [en for en in (to_english(n) for n in pantry_nomes) if en]
-    excluidos_en = [en for en in (to_english(n) for n in excluidos_nomes) if en]
-    receitas_dinamicas = buscar_receitas_dinamicas(pantry_en, excluidos_en, limite=3)
-
-    # receitas locais fixas, como reserva caso a API esteja indisponível
-    receitas_sugeridas = sugerir_receitas(pantry_nomes, restante_kcal, restante_prot,
-                                          excluidos_nomes=excluidos_nomes, top_n=3)
+    receitas_prontas, receitas_quase = sugerir_receitas(
+        pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=excluidos_nomes, top_n=6)
 
     return render_template("sugestao.html", restante_kcal=restante_kcal, restante_prot=restante_prot,
-                            receitas_dinamicas=receitas_dinamicas, receitas_sugeridas=receitas_sugeridas,
+                            receitas_prontas=receitas_prontas, receitas_quase=receitas_quase,
                             pantry=pantry, excluidos=excluidos)
 
 

@@ -12,45 +12,13 @@
 <div class="card" style="font-size:0.85rem;">
   <strong>Como escolho estas receitas:</strong>
   <ol style="padding-left:18px; margin:8px 0 0;">
-    <li>Vou buscar receitas reais a uma base de dados online gratuita (TheMealDB), pesquisando pelo que tens na Despensa.</li>
-    <li>Vejo o que ainda falta hoje (kcal e proteína) — nas receitas fixas de reserva, prioriza as que ajudam a fechar a proteína.</li>
+    <li>Lista de 54 receitas portuguesas/mediterrânicas, escritas por nós — sempre em português.</li>
+    <li>Só aparecem receitas que já dás mesmo para fazer: tens tudo, ou falta só 1 ingrediente.</li>
     <li>Ignoro por completo receitas com alimentos que marcaste como "não gosto".</li>
   </ol>
-  <p style="margin:8px 0 0; color:var(--muted);">As receitas são traduzidas automaticamente para português — a tradução pode não ficar perfeita em todas as frases.</p>
 </div>
 
-{% if receitas_dinamicas %}
-  <h2 style="margin: 20px 0 4px;">🌐 Receitas encontradas para ti</h2>
-  {% for s in receitas_dinamicas %}
-    {% set r = s.receita %}
-    <div class="card">
-      {% if r.imagem %}<img src="{{ r.imagem }}" alt="{{ r.nome }}" style="width:100%; border-radius:10px; margin-bottom:12px;">{% endif %}
-      <h2>🍽️ {{ r.nome }}</h2>
-
-      <h2 style="margin-top:14px;">Ingredientes</h2>
-      <ul class="item-list">
-        {% for ing in r.ingredientes %}
-          <li><span>{{ ing }}</span></li>
-        {% endfor %}
-      </ul>
-
-      <h2 style="margin-top:14px;">Preparo</h2>
-      <ol style="padding-left:20px; margin:0;">
-        {% for passo in r.preparo %}
-          <li style="margin-bottom:6px;">{{ passo }}</li>
-        {% endfor %}
-      </ol>
-
-      {% if s.match_count > 0 %}
-        <p class="subtitle" style="font-size:0.85rem; margin-top:12px;">✅ Cruza com {{ s.match_count }} alimento(s) da tua despensa.</p>
-      {% endif %}
-      <a href="{{ r.fonte_url }}" target="_blank" rel="noopener" class="subtitle" style="font-size:0.8rem;">Ver receita original →</a>
-    </div>
-  {% endfor %}
-{% endif %}
-
-<h2 style="margin: 20px 0 4px;">📌 Receitas fixas (reserva, sempre disponíveis)</h2>
-{% for s in receitas_sugeridas %}
+{% macro receita_card(s) %}
   {% set r = s.receita %}
   <div class="card">
     <h2>🍽️ {{ r.nome }}</h2>
@@ -75,12 +43,27 @@
       {% endfor %}
     </ol>
 
-    {% if s.match_count > 0 %}
-      <p class="subtitle" style="font-size:0.85rem; margin-top:12px;">✅ Já tens {{ s.match_count }} destes ingredientes na despensa.</p>
+    {% if s.faltam|length == 0 %}
+      <p class="subtitle" style="font-size:0.85rem; margin-top:12px; color:var(--green);">✅ Já tens tudo o que precisas em casa.</p>
+    {% else %}
+      <p class="subtitle" style="font-size:0.85rem; margin-top:12px;">🛒 Só falta: {{ s.faltam|join(', ') }}</p>
     {% endif %}
   </div>
+{% endmacro %}
+
+<h2 style="margin: 20px 0 4px;">✅ Prontas a fazer</h2>
+{% for s in receitas_prontas %}
+  {{ receita_card(s) }}
 {% else %}
-  <div class="card"><p class="subtitle">Sem sugestões por agora.</p></div>
+  <div class="card"><p class="subtitle">Ainda não tens tudo para nenhuma receita. Adiciona mais alimentos à Despensa.</p></div>
+{% endfor %}
+
+<h2 style="margin: 24px 0 4px;">✨ Quase lá!</h2>
+<p class="subtitle" style="margin-top:0;">Só te falta comprar 1 ingrediente para cada uma destas.</p>
+{% for s in receitas_quase %}
+  {{ receita_card(s) }}
+{% else %}
+  <div class="card"><p class="subtitle">Nada aqui por agora.</p></div>
 {% endfor %}
 
 <div class="card">
