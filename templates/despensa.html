@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Despensa{% endblock %}
+{% block content %}
+<h1>🧊 O que tenho em casa</h1>
+<p class="subtitle">Adiciona os alimentos que tens disponíveis.</p>
+
+<form method="post" class="card two-col" style="align-items:end;">
+  <div class="field">
+    <label>Alimento</label>
+    <input type="text" name="nome" placeholder="ex: frango" required>
+  </div>
+  <div class="field">
+    <label>Quantidade (opcional)</label>
+    <input type="text" name="quantidade" placeholder="ex: 500g">
+  </div>
+  <button class="btn" type="submit" style="grid-column: 1 / -1;">Adicionar</button>
+</form>
+
+<div class="card">
+  <h2>Na despensa ({{ items|length }})</h2>
+  {% if items %}
+  <ul class="meal-list">
+    {% for item in items %}
+      <li>
+        <span class="meal-name">{{ item.nome }} {% if item.quantidade %}<span class="tag">{{ item.quantidade }}</span>{% endif %}</span>
+        <form method="post" action="{{ url_for('remover_despensa', page_id=item.page_id) }}">
+          <button class="btn btn-sm btn-danger" type="submit">Remover</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+    <p class="subtitle">Ainda não adicionaste nada.</p>
+  {% endif %}
+</div>
+
+<a href="{{ url_for('sugestao') }}" class="btn btn-secondary">🤖 O que posso comer agora?</a>
+{% endblock %}

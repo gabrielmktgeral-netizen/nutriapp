@@ -1,0 +1,29 @@
+"""Escolhe automaticamente o backend de dados:
+- Se NOTION_TOKEN estiver definido -> usa o Notion (notion_db.py)
+- Caso contrário -> usa um ficheiro JSON local (local_db.py), para testares
+  a app no PC sem precisares de configurar o Notion.
+
+O app.py e as rotas usam sempre `data_store`, nunca diretamente notion_db ou local_db.
+"""
+import os
+
+USING_NOTION = bool(os.environ.get("NOTION_TOKEN"))
+
+if USING_NOTION:
+    from notion_db import (  # noqa: F401
+        configured, get_profile, save_profile,
+        add_meal, get_meals_between, get_meals_for_day,
+        get_pantry, add_pantry_item, delete_pantry_item,
+        add_weight, get_weight_history,
+        add_exercise, get_exercise_between,
+    )
+    BACKEND_NAME = "Notion"
+else:
+    from local_db import (  # noqa: F401
+        configured, get_profile, save_profile,
+        add_meal, get_meals_between, get_meals_for_day,
+        get_pantry, add_pantry_item, delete_pantry_item,
+        add_weight, get_weight_history,
+        add_exercise, get_exercise_between,
+    )
+    BACKEND_NAME = "Local (ficheiro JSON, modo teste)"

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Sugestão{% endblock %}
+{% block content %}
+<h1>🤖 O que posso comer agora?</h1>
+
+<div class="assistant-box">
+  <p style="margin:0;">
+    Ainda tens <strong>{{ restante_kcal }} kcal</strong> e <strong>{{ restante_prot }}g de proteína</strong> disponíveis hoje.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Da tua despensa, prioriza estes (mais proteína por caloria)</h2>
+  {% if sugestoes %}
+    <ul class="item-list">
+      {% for s in sugestoes %}
+        <li>
+          <span>{{ s.nome }}</span>
+          <span>{{ s.kcal_100g|round|int }} kcal / {{ s.proteina_100g }}g proteína (por 100g)</span>
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="subtitle" style="font-size:0.85rem; margin-top:10px;">
+      Combina 1-2 destes alimentos até chegares perto do que ainda falta.
+    </p>
+  {% else %}
+    <p class="subtitle">Não há alimentos reconhecidos na despensa. <a href="{{ url_for('despensa') }}">Adiciona alguns aqui</a>.</p>
+  {% endif %}
+</div>
+
+<a href="{{ url_for('registar_refeicao') }}" class="btn">Registar o que vou comer</a>
+{% endblock %}

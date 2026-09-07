@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Exercício{% endblock %}
+{% block content %}
+<h1>🏋️ Exercício</h1>
+
+<form method="post" class="card">
+  <div class="field">
+    <label>O que treinaste?</label>
+    <input type="text" name="nome" placeholder="ex: Treino de pernas" required>
+  </div>
+  <div class="two-col">
+    <div class="field">
+      <label>Duração (min)</label>
+      <input type="number" name="duracao_min">
+    </div>
+    <div class="field">
+      <label>Calorias estimadas</label>
+      <input type="number" name="kcal_estimadas">
+    </div>
+  </div>
+  <button class="btn" type="submit">Registar treino</button>
+</form>
+
+<div class="card">
+  <h2>Esta semana</h2>
+  {% if week_ex %}
+    <ul class="item-list">
+      {% for e in week_ex %}
+        <li>
+          <span>{{ e.data }} — {{ e.nome }}</span>
+          <span>{{ e.duracao_min or '-' }} min{% if e.kcal_estimadas %} · {{ e.kcal_estimadas }} kcal{% endif %}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="subtitle">Ainda não há treinos registados esta semana.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}NutriApp{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <nav class="topnav">
+    <a href="{{ url_for('index') }}" class="brand">🥗 NutriApp</a>
+    <div class="nav-links">
+      <a href="{{ url_for('index') }}">Hoje</a>
+      <a href="{{ url_for('despensa') }}">Despensa</a>
+      <a href="{{ url_for('sugestao') }}">Sugestão</a>
+      <a href="{{ url_for('exercicio') }}">Exercício</a>
+      <a href="{{ url_for('peso') }}">Peso</a>
+      <a href="{{ url_for('onboarding') }}">Perfil</a>
+    </div>
+  </nav>
+
+  {% if not using_notion %}
+  <div class="banner-info">
+    🧪 Modo teste local — os dados ficam num ficheiro no teu PC (<code>data/local_db.json</code>), não no Notion.
+    Quando quiseres ligar ao Notion, segue o <code>README.md</code>.
+  </div>
+  {% endif %}
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

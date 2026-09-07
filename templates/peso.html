@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Peso{% endblock %}
+{% block content %}
+<h1>⚖️ Evolução do peso</h1>
+
+<form method="post" class="card two-col" style="align-items:end;">
+  <div class="field">
+    <label>Peso de hoje (kg)</label>
+    <input type="number" step="0.1" name="peso_kg" required>
+  </div>
+  <button class="btn" type="submit">Registar</button>
+</form>
+
+<div class="card">
+  <h2>Histórico recente</h2>
+  {% if history %}
+    <ul class="item-list">
+      {% for h in history %}
+        <li><span>{{ h.data }}</span><span>{{ h.peso_kg }} kg</span></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="subtitle">Ainda sem registos de peso.</p>
+  {% endif %}
+</div>
+{% endblock %}

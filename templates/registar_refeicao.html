@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Registar refeição{% endblock %}
+{% block content %}
+<h1>🍽️ Registar refeição</h1>
+<p class="subtitle">Escreve o que comeste em texto normal. Ex: "200g de frango com arroz e uma banana".</p>
+
+<form method="post" class="card">
+  <div class="field">
+    <label>Refeição</label>
+    <select name="tipo">
+      {% for key, info in meal_labels.items() %}
+        <option value="{{ key }}" {{ 'selected' if key==tipo_padrao }}>{{ info[0] }} {{ info[1] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label>O que comeste?</label>
+    <textarea name="texto" placeholder="200g de frango grelhado com arroz e uma banana" required></textarea>
+  </div>
+  <button class="btn" type="submit">Calcular e guardar</button>
+</form>
+
+{% if resultado %}
+<div class="card">
+  <h2>Resultado</h2>
+  <div class="macro-grid">
+    <div class="macro-box"><div class="value">🔥 {{ resultado.total.kcal|round|int }}</div><div class="label">kcal</div></div>
+    <div class="macro-box"><div class="value">🥩 {{ resultado.total.proteina_g|round|int }}g</div><div class="label">proteína</div></div>
+    <div class="macro-box"><div class="value">🍚 {{ resultado.total.hidratos_g|round|int }}g</div><div class="label">hidratos</div></div>
+    <div class="macro-box"><div class="value">🥑 {{ resultado.total.gordura_g|round|int }}g</div><div class="label">gordura</div></div>
+  </div>
+
+  <h2 style="margin-top:16px;">Itens identificados</h2>
+  <ul class="item-list">
+    {% for item in resultado.itens %}
+      <li>
+        <span>
+          {% if item.encontrado %}✅{% else %}❓{% endif %}
+          {{ item.texto }}
+          {% if item.encontrado %}<span class="tag">{{ item.gramas }}g</span>{% endif %}
+        </span>
+        <span>{{ item.kcal|round|int if item.encontrado else 'não reconhecido' }}{% if item.encontrado %} kcal{% endif %}</span>
+      </li>
+    {% endfor %}
+  </ul>
+  {% if resultado.itens|selectattr('encontrado', 'equalto', false)|list %}
+    <p class="subtitle" style="font-size:0.85rem;">⚠️ Alguns alimentos não foram reconhecidos e não entraram nos totais. A base de alimentos ainda é pequena — dá para expandir facilmente em <code>food_data.py</code>.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
