@@ -514,9 +514,8 @@ def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, excluidos_nomes
     pantry_lower = [p.lower() for p in pantry_nomes]
     excluidos_lower = [e.lower() for e in (excluidos_nomes or [])]
 
-    receitas_extra = list(receitas_extra or [])
     prontas, quase = [], []
-    for r in RECIPES + receitas_extra:
+    for r in RECIPES + list(receitas_extra or []):
         chaves = [c.lower() for c in r["chave_despensa"]]
 
         tem_excluido = any(
@@ -535,8 +534,7 @@ def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, excluidos_nomes
         ajuda_proteina = r["proteina_g"] >= (restante_prot * 0.25 if restante_prot > 0 else 0)
         score = (1 if cabe_kcal else 0) + (1 if ajuda_proteina else 0)
 
-        item = {"receita": r, "match_count": match_count, "faltam": falta, "_score": score,
-                "_custom": r in receitas_extra}
+        item = {"receita": r, "match_count": match_count, "faltam": falta, "_score": score}
         if len(falta) == 0:
             prontas.append(item)
         elif len(falta) == 1:
@@ -544,12 +542,4 @@ def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, excluidos_nomes
 
     prontas.sort(key=lambda x: -x["_score"])
     quase.sort(key=lambda x: -x["_score"])
-
-    # as tuas próprias receitas nunca ficam de fora por causa do limite top_n —
-    # se qualificam (prontas/quase) mostramos sempre, mesmo além do corte normal
-    def _com_custom_garantidas(lista):
-        topo = lista[:top_n]
-        extras_fora = [it for it in lista[top_n:] if it["_custom"] and it not in topo]
-        return topo + extras_fora
-
-    return _com_custom_garantidas(prontas), _com_custom_garantidas(quase)
+    return prontas[:top_n], quase[:top_n]
