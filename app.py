@@ -267,6 +267,7 @@ def pesquisar_alimento():
     except Exception:
         return jsonify({"encontrado": False})
 
+    opcoes = []
     for p in produtos:
         nutri = p.get("nutriments", {})
         kcal = nutri.get("energy-kcal_100g")
@@ -275,15 +276,16 @@ def pesquisar_alimento():
         gordura = nutri.get("fat_100g")
         if kcal is None:
             continue
-        return jsonify({
-            "encontrado": True,
+        opcoes.append({
             "nome_produto": p.get("product_name") or nome,
             "kcal": round(kcal, 1),
             "proteina_g": round(proteina or 0, 1),
             "hidratos_g": round(hidratos or 0, 1),
             "gordura_g": round(gordura or 0, 1),
         })
-    return jsonify({"encontrado": False})
+    if not opcoes:
+        return jsonify({"encontrado": False})
+    return jsonify({"encontrado": True, "opcoes": opcoes})
 
 
 @app.route("/alimentos/novo", methods=["POST"])
