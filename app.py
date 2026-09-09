@@ -2,6 +2,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 
+import requests
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 
 import data_store as db
@@ -239,6 +240,50 @@ def registar_refeicao():
                             receitas_sugeridas=receitas_sugeridas,
                             unit_order=mi.UNIT_ORDER, unit_labels=mi.UNIT_LABELS,
                             datalist_opcoes=mi.opcoes_datalist(alimentos_custom))
+
+
+@app.route("/alimentos/pesquisar")
+def pesquisar_alimento():
+    """Vai à Open Food Facts (base de dados livre de alimentos) tentar
+    preencher automaticamente kcal/proteína/hidratos/gordura por 100g,
+    a partir do nome escrito pela pessoa. Devolve {"encontrado": false}
+    se não conseguir (sem internet, alimento não existe lá, etc) — nesse
+    caso a pessoa preenche à mão como antes."""
+    nome = (request.args.get("nome") or "").strip()
+    if not nome:
+        return jsonify({"encontrado": False})
+    try:
+        r = requests.get(
+            "https://world.openfoodfacts.org/cgi/search.pl",
+            params={
+                "search_terms": nome, "search_simple": 1, "json": 1,
+                "page_size": 5, "fields": "product_name,nutriments",
+            },
+            timeout=6,
+            headers={"User-Agent": "NutriApp/1.0 (app pessoal)"},
+        )
+        r.raise_for_status()
+        produtos = r.json().get("products", [])
+    except Exception:
+        return jsonify({"encontrado": False})
+
+    for p in produtos:
+        nutri = p.get("nutriments", {})
+        kcal = nutri.get("energy-kcal_100g")
+        proteina = nutri.get("proteins_100g")
+        hidratos = nutri.get("carbohydrates_100g")
+        gordura = nutri.get("fat_100g")
+        if kcal is None:
+            continue
+        return jsonify({
+            "encontrado": True,
+            "nome_produto": p.get("product_name") or nome,
+            "kcal": round(kcal, 1),
+            "proteina_g": round(proteina or 0, 1),
+            "hidratos_g": round(hidratos or 0, 1),
+            "gordura_g": round(gordura or 0, 1),
+        })
+    return jsonify({"encontrado": False})
 
 
 @app.route("/alimentos/novo", methods=["POST"])

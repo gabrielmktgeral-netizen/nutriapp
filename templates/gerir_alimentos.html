@@ -25,7 +25,9 @@
             <label>Nome</label>
             <input type="text" name="nome" value="{{ a.nome }}" required>
           </div>
-          <p class="subtitle" style="font-size:0.85rem;">Valores por 100g:</p>
+          <button type="button" class="btn btn-sm btn-outline" onclick="preencherAutomatico(this)">🔍 Preencher automaticamente</button>
+          <span class="preencher-estado" style="font-size:0.8rem; margin-left:8px;"></span>
+          <p class="subtitle" style="font-size:0.85rem; margin-top:10px;">Valores por 100g:</p>
           <div class="macro-grid">
             <div class="field"><label>🔥 Kcal</label><input type="number" name="kcal" step="0.1" min="0" value="{{ a.kcal }}" required></div>
             <div class="field"><label>🥩 Proteína (g)</label><input type="number" name="proteina" step="0.1" min="0" value="{{ a.proteina_g }}" required></div>

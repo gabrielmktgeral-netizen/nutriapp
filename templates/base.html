@@ -41,6 +41,39 @@
   </main>
 
   <script>
+    // Botão "Preencher automaticamente" (criar/editar alimento): procura o
+    // nome na Open Food Facts e preenche kcal/proteína/hidratos/gordura do
+    // formulário mais próximo. Usado em várias páginas, por isso vive aqui.
+    function preencherAutomatico(btn) {
+      var form = btn.closest('form');
+      var nomeInput = form.querySelector('input[name="nome"]');
+      var estado = form.querySelector('.preencher-estado');
+      var nome = (nomeInput.value || '').trim();
+      if (!nome) {
+        if (estado) estado.textContent = '⚠️ Escreve o nome primeiro.';
+        return;
+      }
+      if (estado) estado.textContent = '🔍 A procurar…';
+      fetch('/alimentos/pesquisar?nome=' + encodeURIComponent(nome))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.encontrado) {
+            if (estado) estado.textContent = '❌ Não encontrei — preenche à mão.';
+            return;
+          }
+          form.querySelector('input[name="kcal"]').value = data.kcal;
+          form.querySelector('input[name="proteina"]').value = data.proteina_g;
+          form.querySelector('input[name="hidratos"]').value = data.hidratos_g;
+          form.querySelector('input[name="gordura"]').value = data.gordura_g;
+          if (estado) estado.textContent = '✅ Preenchido! Confirma se está certo.';
+        })
+        .catch(function () {
+          if (estado) estado.textContent = '❌ Falhou — preenche à mão.';
+        });
+    }
+  </script>
+
+  <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(function (e) {
         console.warn("Falha ao registar service worker:", e);
