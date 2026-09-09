@@ -130,6 +130,19 @@ FOOD_CHOICES = [
     ("refrigerante", "Refrigerante"),
     ("sumo de laranja", "Sumo de laranja"),
     ("água de coco", "Água de coco"),
+    ("feijão miúdo", "Feijão miúdo"),
+    ("feijão preto", "Feijão preto"),
+    ("arroz com raspas de cenoura", "Arroz com raspas de cenoura"),
+    ("arroz com ervilhas", "Arroz com ervilhas"),
+    ("arroz com cenoura", "Arroz com cenoura"),
+    ("pimentos", "Pimentos"),
+    ("molho de tomate", "Molho de tomate"),
+    ("rissóis", "Rissóis"),
+    ("bolinhos de bacalhau", "Bolinhos de bacalhau"),
+    ("hambúrguer de carne", "Hambúrguer (carne)"),
+    ("bacon", "Bacon"),
+    ("coca-cola", "Coca-Cola"),
+    ("ice tea", "Ice Tea"),
 ]
 
 

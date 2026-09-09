@@ -150,6 +150,26 @@ FOODS = {
     "sumo de laranja": (45, 0.7, 10, 0.2),
     "agua de coco": (19, 0.7, 3.7, 0.2),
     "água de coco": (19, 0.7, 3.7, 0.2),
+
+    # ---------- pedidos do utilizador ----------
+    "feijao miudo": (127, 9, 23, 0.5),
+    "feijão miúdo": (127, 9, 23, 0.5),
+    "feijao preto": (132, 8.9, 23, 0.5),
+    "feijão preto": (132, 8.9, 23, 0.5),
+    "arroz com raspas de cenoura": (135, 2.7, 27, 1),
+    "arroz com ervilhas": (140, 3.5, 27, 1),
+    "arroz com cenoura": (135, 2.8, 27, 0.8),
+    "pimentos": (31, 1, 6, 0.3),
+    "molho de tomate": (35, 1.5, 7, 0.5),
+    "rissois": (280, 9, 25, 16),
+    "rissóis": (280, 9, 25, 16),
+    "bolinhos de bacalhau": (250, 12, 20, 14),
+    "hamburguer de carne": (250, 20, 0, 18),
+    "hambúrguer de carne": (250, 20, 0, 18),
+    "bacon": (541, 37, 1.4, 42),
+    "coca-cola": (42, 0, 10.6, 0),
+    "coca cola": (42, 0, 10.6, 0),
+    "ice tea": (32, 0, 7.8, 0),
 }
 
 UNIT_G_DEFAULTS = {
@@ -161,6 +181,12 @@ UNIT_G_DEFAULTS = {
     "fatia de pao": 30,
     "fatia de pão": 30,
     "iogurte": 125,
+    "rissois": 50,
+    "rissóis": 50,
+    "bolinhos de bacalhau": 40,
+    "hamburguer de carne": 120,
+    "hambúrguer de carne": 120,
+    "bacon": 10,
 }
 
 # Quantos gramas tem "1 dose"/"1 porção" de cada alimento (porção normal para
@@ -273,6 +299,24 @@ PORTION_G_DEFAULTS = {
     "sumo de laranja": 200,
     "agua de coco": 250,
     "água de coco": 250,
+    "feijao miudo": 150,
+    "feijão miúdo": 150,
+    "feijao preto": 150,
+    "feijão preto": 150,
+    "arroz com raspas de cenoura": 200,
+    "arroz com ervilhas": 200,
+    "arroz com cenoura": 200,
+    "pimentos": 100,
+    "molho de tomate": 60,
+    "rissois": 100,
+    "rissóis": 100,
+    "bolinhos de bacalhau": 100,
+    "hamburguer de carne": 120,
+    "hambúrguer de carne": 120,
+    "bacon": 30,
+    "coca-cola": 330,
+    "coca cola": 330,
+    "ice tea": 330,
 }
 PORTION_G_PADRAO = 150  # se o alimento não estiver na lista acima, assume 150g por dose
 
