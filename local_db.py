@@ -10,7 +10,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 DATA_FILE = os.path.join(DATA_DIR, "local_db.json")
 
 _EMPTY = {"profile": None, "meals": [], "pantry": [], "weights": [], "exercises": [], "excluidos": [],
-          "push_subscriptions": [], "custom_recipes": []}
+          "push_subscriptions": [], "custom_recipes": [], "custom_foods": []}
 
 
 def configured():
@@ -242,6 +242,44 @@ def delete_push_subscription(endpoint):
 
 
 # ---------- RECEITAS PERSONALIZADAS ----------
+
+def get_custom_foods():
+    data = _load()
+    return data.setdefault("custom_foods", [])
+
+
+def add_custom_food(nome, kcal, proteina_g, hidratos_g, gordura_g):
+    data = _load()
+    foods = data.setdefault("custom_foods", [])
+    item = {
+        "page_id": str(uuid.uuid4()), "nome": nome,
+        "kcal": round(kcal, 1), "proteina_g": round(proteina_g, 1),
+        "hidratos_g": round(hidratos_g, 1), "gordura_g": round(gordura_g, 1),
+    }
+    foods.append(item)
+    _save(data)
+    return item
+
+
+def update_custom_food(page_id, nome, kcal, proteina_g, hidratos_g, gordura_g):
+    data = _load()
+    for f in data.setdefault("custom_foods", []):
+        if f["page_id"] == page_id:
+            f.update({
+                "nome": nome, "kcal": round(kcal, 1), "proteina_g": round(proteina_g, 1),
+                "hidratos_g": round(hidratos_g, 1), "gordura_g": round(gordura_g, 1),
+            })
+            _save(data)
+            return f
+    return None
+
+
+def delete_custom_food(page_id):
+    data = _load()
+    foods = data.setdefault("custom_foods", [])
+    data["custom_foods"] = [f for f in foods if f["page_id"] != page_id]
+    _save(data)
+
 
 def get_custom_recipes():
     data = _load()

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Gerir alimentos{% endblock %}
+{% block content %}
+<h1>🥕 Gerir alimentos</h1>
+<p class="subtitle">Todos os alimentos que a app conhece. Podes corrigir os valores de qualquer um.</p>
+
+<div class="card">
+  <ul class="item-list">
+    {% for a in alimentos %}
+      <li style="flex-direction:column; align-items:stretch;">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <span>
+            {{ a.nome }}
+            {% if a.personalizado %}<span class="tag">personalizado</span>{% endif %}
+          </span>
+          <button type="button" class="btn btn-sm btn-outline"
+                  onclick="document.getElementById('editar-{{ loop.index }}').classList.toggle('hidden-form')">
+            Editar
+          </button>
+        </div>
+
+        <form method="post" action="{{ url_for('guardar_alimento') }}" id="editar-{{ loop.index }}" class="hidden-form" style="margin-top:10px; width:100%;">
+          <input type="hidden" name="page_id" value="{{ a.page_id or '' }}">
+          <div class="field">
+            <label>Nome</label>
+            <input type="text" name="nome" value="{{ a.nome }}" required>
+          </div>
+          <p class="subtitle" style="font-size:0.85rem;">Valores por 100g:</p>
+          <div class="macro-grid">
+            <div class="field"><label>🔥 Kcal</label><input type="number" name="kcal" step="0.1" min="0" value="{{ a.kcal }}" required></div>
+            <div class="field"><label>🥩 Proteína (g)</label><input type="number" name="proteina" step="0.1" min="0" value="{{ a.proteina_g }}" required></div>
+            <div class="field"><label>🍚 Hidratos (g)</label><input type="number" name="hidratos" step="0.1" min="0" value="{{ a.hidratos_g }}" required></div>
+            <div class="field"><label>🥑 Gordura (g)</label><input type="number" name="gordura" step="0.1" min="0" value="{{ a.gordura_g }}" required></div>
+          </div>
+          <button class="btn btn-sm" type="submit" style="margin-top:8px;">Guardar</button>
+        </form>
+
+        {% if a.personalizado %}
+        <form method="post" action="{{ url_for('remover_personalizacao_alimento', page_id=a.page_id) }}" style="margin-top:6px;">
+          <button type="submit" class="btn btn-sm btn-secondary">↺ Repor valores originais / remover</button>
+        </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<style>.hidden-form { display:none; }</style>
+{% endblock %}

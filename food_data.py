@@ -60,6 +60,96 @@ FOODS = {
     "manteiga de amendoim": (588, 25, 20, 50),
     "whey protein": (400, 80, 8, 5),
     "proteina em po": (400, 80, 8, 5),
+
+    # ---------- mais carnes / charcutaria ----------
+    "peru": (135, 30, 0, 1),
+    "peru fatiado": (104, 18, 3, 2),
+    "fiambre": (111, 18, 2, 3.5),
+    "chourico": (455, 24, 2, 38),
+    "chouriço": (455, 24, 2, 38),
+    "presunto": (195, 28, 0, 9),
+    "salsicha": (300, 12, 3, 27),
+    "costeleta de porco": (231, 25, 0, 14),
+    "entrecosto": (280, 20, 0, 22),
+
+    # ---------- peixe / marisco ----------
+    "camarao": (99, 24, 0.2, 0.3),
+    "camarão": (99, 24, 0.2, 0.3),
+    "lulas": (92, 15, 3, 1.4),
+    "polvo": (82, 15, 2, 1),
+    "mexilhoes": (86, 12, 3.7, 2.2),
+    "mexilhões": (86, 12, 3.7, 2.2),
+    "sardinha": (208, 25, 0, 11.5),
+    "carapau": (146, 20, 0, 7),
+    "dourada": (96, 20, 0, 1.7),
+    "robalo": (97, 18, 0, 2.5),
+    "truta": (148, 20, 0, 7),
+
+    # ---------- laticínios ----------
+    "queijo mozzarella": (280, 28, 2.2, 17),
+    "queijo cheddar": (402, 25, 1.3, 33),
+    "requeijao": (174, 11, 3, 13),
+    "requeijão": (174, 11, 3, 13),
+    "kefir": (41, 3.4, 4.8, 1),
+    "natas": (195, 2.5, 3, 20),
+
+    # ---------- doces / snacks ----------
+    "pudim": (150, 4, 25, 4),
+    "gelado": (207, 3.5, 24, 11),
+    "chocolate preto": (546, 7.8, 46, 31),
+    "chocolate de leite": (535, 7.7, 59, 30),
+    "mel": (304, 0.3, 82, 0),
+    "compota": (250, 0.4, 63, 0.1),
+    "cereais matinais": (375, 7, 80, 3),
+    "bolachas maria": (430, 7, 75, 12),
+    "bolo simples": (350, 5, 50, 14),
+    "croissant": (406, 8, 45, 21),
+    "batata frita de pacote": (536, 6.6, 53, 35),
+    "pipocas": (387, 12, 78, 4.5),
+
+    # ---------- refeições rápidas ----------
+    "pizza": (266, 11, 33, 10),
+    "hamburguer": (295, 17, 24, 14),
+    "hambúrguer": (295, 17, 24, 14),
+
+    # ---------- frutos secos ----------
+    "pinhoes": (673, 14, 13, 68),
+    "pinhões": (673, 14, 13, 68),
+    "castanhas": (213, 4, 45, 2.3),
+
+    # ---------- fruta ----------
+    "uva": (69, 0.7, 18, 0.2),
+    "morango": (32, 0.7, 7.7, 0.3),
+    "ananas": (50, 0.5, 13, 0.1),
+    "melancia": (30, 0.6, 8, 0.2),
+    "melao": (34, 0.8, 8, 0.2),
+    "melão": (34, 0.8, 8, 0.2),
+    "pera": (57, 0.4, 15, 0.1),
+    "laranja": (47, 0.9, 12, 0.1),
+    "kiwi": (61, 1.1, 15, 0.5),
+    "manga": (60, 0.8, 15, 0.4),
+    "abacate": (160, 2, 9, 15),
+
+    # ---------- legumes ----------
+    "pepino": (15, 0.7, 3.6, 0.1),
+    "courgette": (17, 1.2, 3.1, 0.3),
+    "pimento": (31, 1, 6, 0.3),
+    "couve": (25, 1.3, 5.8, 0.1),
+    "couve-flor": (25, 1.9, 5, 0.3),
+    "cogumelos": (22, 3.1, 3.3, 0.3),
+    "milho": (86, 3.2, 19, 1.2),
+    "ervilhas": (81, 5.4, 14, 0.4),
+
+    # ---------- cereais / grãos ----------
+    "quinoa": (120, 4.4, 21, 1.9),
+
+    # ---------- bebidas ----------
+    "vinho": (83, 0.1, 2.6, 0),
+    "cerveja": (43, 0.5, 3.6, 0),
+    "refrigerante": (42, 0, 10.6, 0),
+    "sumo de laranja": (45, 0.7, 10, 0.2),
+    "agua de coco": (19, 0.7, 3.7, 0.2),
+    "água de coco": (19, 0.7, 3.7, 0.2),
 }
 
 UNIT_G_DEFAULTS = {
@@ -113,6 +203,76 @@ PORTION_G_DEFAULTS = {
     "iogurte": 125,
     "iogurte grego": 125,
     "iogurte natural": 125,
+    "peru": 150,
+    "peru fatiado": 40,
+    "fiambre": 40,
+    "chourico": 50,
+    "chouriço": 50,
+    "presunto": 40,
+    "salsicha": 100,
+    "costeleta de porco": 150,
+    "entrecosto": 200,
+    "camarao": 120,
+    "camarão": 120,
+    "lulas": 150,
+    "polvo": 150,
+    "mexilhoes": 150,
+    "mexilhões": 150,
+    "sardinha": 150,
+    "carapau": 150,
+    "dourada": 180,
+    "robalo": 180,
+    "truta": 180,
+    "queijo mozzarella": 50,
+    "queijo cheddar": 30,
+    "requeijao": 50,
+    "requeijão": 50,
+    "kefir": 200,
+    "natas": 30,
+    "pudim": 100,
+    "gelado": 100,
+    "chocolate preto": 25,
+    "chocolate de leite": 25,
+    "mel": 20,
+    "compota": 20,
+    "cereais matinais": 40,
+    "bolachas maria": 30,
+    "bolo simples": 80,
+    "croissant": 60,
+    "batata frita de pacote": 40,
+    "pipocas": 30,
+    "pizza": 200,
+    "hamburguer": 150,
+    "hambúrguer": 150,
+    "pinhoes": 20,
+    "pinhões": 20,
+    "castanhas": 100,
+    "uva": 150,
+    "morango": 150,
+    "ananas": 150,
+    "melancia": 200,
+    "melao": 200,
+    "melão": 200,
+    "pera": 130,
+    "laranja": 150,
+    "kiwi": 90,
+    "manga": 150,
+    "abacate": 100,
+    "pepino": 100,
+    "courgette": 150,
+    "pimento": 100,
+    "couve": 150,
+    "couve-flor": 150,
+    "cogumelos": 100,
+    "milho": 100,
+    "ervilhas": 100,
+    "quinoa": 150,
+    "vinho": 150,
+    "cerveja": 330,
+    "refrigerante": 330,
+    "sumo de laranja": 200,
+    "agua de coco": 250,
+    "água de coco": 250,
 }
 PORTION_G_PADRAO = 150  # se o alimento não estiver na lista acima, assume 150g por dose
 
@@ -127,14 +287,22 @@ LATA_G_DEFAULTS = {
 LATA_G_PADRAO = 120  # se o alimento não estiver na lista acima
 
 
-def lookup(food_name: str):
+def lookup(food_name: str, extra: dict = None):
+    """extra: dict opcional {nome_em_minusculas: (kcal, proteina_g, hidratos_g, gordura_g)}
+    com alimentos personalizados do utilizador, verificados primeiro."""
     key = food_name.strip().lower()
+    if extra and key in extra:
+        return extra[key]
     if key in FOODS:
         return FOODS[key]
     # tenta correspondência parcial
     for name, vals in FOODS.items():
         if name in key or key in name:
             return vals
+    if extra:
+        for name, vals in extra.items():
+            if name in key or key in name:
+                return vals
     return None
 
 

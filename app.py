@@ -196,16 +196,22 @@ def onboarding():
 def registar_refeicao():
     tipo_padrao = request.args.get("tipo", "almoco")
     resultado = None
+    alimentos_custom = db.get_custom_foods() if db.configured() else []
+    extra = mi.dict_custom(alimentos_custom)
     if request.method == "POST":
         tipo = request.form["tipo"]
         itens_form = mi.itens_do_formulario(request.form)
         if itens_form:
-            total, itens = mi.calcular_itens(itens_form)
-            texto_canonico = mi.codificar(itens_form)
-            db.add_meal(date.today().isoformat(), tipo, texto_canonico,
-                        total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
-            resultado = {"total": total, "itens": itens}
-            flash("Refeição registada! ✅", "success")
+            total, itens, nao_reconhecidos = mi.calcular_itens(itens_form, extra=extra)
+            if itens:
+                texto_canonico = mi.codificar([it for it in itens_form if it["chave"] not in nao_reconhecidos])
+                db.add_meal(date.today().isoformat(), tipo, texto_canonico,
+                            total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
+                resultado = {"total": total, "itens": itens}
+                flash("Refeição registada! ✅", "success")
+            if nao_reconhecidos:
+                flash("Não conheço: " + ", ".join(nao_reconhecidos) +
+                      ". Cria estes alimentos em baixo (⬇️ Não encontraste o alimento?) e volta a tentar.", "error")
         else:
             flash("Escolhe pelo menos um alimento.", "error")
         tipo_padrao = tipo
@@ -231,8 +237,73 @@ def registar_refeicao():
     return render_template("registar_refeicao.html", tipo_padrao=tipo_padrao,
                             meal_labels=nc.MEAL_LABELS, resultado=resultado,
                             receitas_sugeridas=receitas_sugeridas,
-                            food_choices=mi.FOOD_CHOICES, unit_order=mi.UNIT_ORDER,
-                            unit_labels=mi.UNIT_LABELS)
+                            unit_order=mi.UNIT_ORDER, unit_labels=mi.UNIT_LABELS,
+                            datalist_opcoes=mi.opcoes_datalist(alimentos_custom))
+
+
+@app.route("/alimentos/novo", methods=["POST"])
+def criar_alimento():
+    nome = request.form.get("nome", "").strip()
+    seguinte = request.form.get("next") or ""
+    if not seguinte.startswith("/"):
+        seguinte = url_for("registar_refeicao")
+
+    def voltar():
+        return redirect(seguinte)
+
+    if not nome:
+        flash("Escreve o nome do alimento.", "error")
+        return voltar()
+    try:
+        kcal = float((request.form.get("kcal") or "0").replace(",", "."))
+        proteina = float((request.form.get("proteina") or "0").replace(",", "."))
+        hidratos = float((request.form.get("hidratos") or "0").replace(",", "."))
+        gordura = float((request.form.get("gordura") or "0").replace(",", "."))
+    except ValueError:
+        flash("Os valores têm de ser números.", "error")
+        return voltar()
+
+    db.add_custom_food(nome, kcal, proteina, hidratos, gordura)
+    flash(f"'{nome}' criado! Já podes escrever o nome dele na refeição. ✅", "success")
+    return voltar()
+
+
+@app.route("/alimentos")
+def gerir_alimentos():
+    alimentos_custom = db.get_custom_foods() if db.configured() else []
+    return render_template("gerir_alimentos.html", alimentos=mi.lista_completa(alimentos_custom))
+
+
+@app.route("/alimentos/guardar", methods=["POST"])
+def guardar_alimento():
+    nome = request.form.get("nome", "").strip()
+    page_id = request.form.get("page_id", "").strip()
+    if not nome:
+        flash("Escreve o nome do alimento.", "error")
+        return redirect(url_for("gerir_alimentos"))
+    try:
+        kcal = float((request.form.get("kcal") or "0").replace(",", "."))
+        proteina = float((request.form.get("proteina") or "0").replace(",", "."))
+        hidratos = float((request.form.get("hidratos") or "0").replace(",", "."))
+        gordura = float((request.form.get("gordura") or "0").replace(",", "."))
+    except ValueError:
+        flash("Os valores têm de ser números.", "error")
+        return redirect(url_for("gerir_alimentos"))
+
+    if page_id:
+        db.update_custom_food(page_id, nome, kcal, proteina, hidratos, gordura)
+        flash(f"'{nome}' atualizado! ✏️", "success")
+    else:
+        db.add_custom_food(nome, kcal, proteina, hidratos, gordura)
+        flash(f"'{nome}' guardado com os teus valores. ✅", "success")
+    return redirect(url_for("gerir_alimentos"))
+
+
+@app.route("/alimentos/<page_id>/remover-personalizacao", methods=["POST"])
+def remover_personalizacao_alimento(page_id):
+    db.delete_custom_food(page_id)
+    flash("Voltou aos valores por omissão (ou foi removido, se era só teu).", "success")
+    return redirect(url_for("gerir_alimentos"))
 
 
 @app.route("/registar-refeicao/receita", methods=["POST"])
@@ -263,25 +334,35 @@ def editar_refeicao(page_id):
         flash("Não encontrei essa refeição.", "error")
         return redirect(url_for("index"))
 
+    alimentos_custom = db.get_custom_foods() if db.configured() else []
+    extra = mi.dict_custom(alimentos_custom)
+
     if request.method == "POST":
         itens_form = mi.itens_do_formulario(request.form)
+        guardou = False
         if itens_form:
-            total, itens = mi.calcular_itens(itens_form)
-            texto_canonico = mi.codificar(itens_form)
-            db.update_meal(page_id, texto_canonico, total["kcal"], total["proteina_g"],
-                            total["hidratos_g"], total["gordura_g"])
-            flash("Refeição atualizada! ✏️", "success")
+            total, itens, nao_reconhecidos = mi.calcular_itens(itens_form, extra=extra)
+            if itens:
+                texto_canonico = mi.codificar([it for it in itens_form if it["chave"] not in nao_reconhecidos])
+                db.update_meal(page_id, texto_canonico, total["kcal"], total["proteina_g"],
+                                total["hidratos_g"], total["gordura_g"])
+                flash("Refeição atualizada! ✏️", "success")
+                guardou = True
+            if nao_reconhecidos:
+                flash("Não conheço: " + ", ".join(nao_reconhecidos) +
+                      ". Cria estes alimentos em baixo (⬇️ Não encontraste o alimento?) e volta a tentar.", "error")
         else:
             flash("Escolhe pelo menos um alimento.", "error")
-        if voltar and voltar != "index":
-            return redirect(url_for("dia", data_iso=voltar))
-        return redirect(url_for("index"))
+        if guardou:
+            if voltar and voltar != "index":
+                return redirect(url_for("dia", data_iso=voltar))
+            return redirect(url_for("index"))
 
     itens_atuais = mi.descodificar(meal.get("texto_original"))
     return render_template("editar_refeicao.html", meal=meal, meal_labels=nc.MEAL_LABELS, voltar=voltar,
                             itens_atuais=itens_atuais,
-                            food_choices=mi.FOOD_CHOICES, unit_order=mi.UNIT_ORDER,
-                            unit_labels=mi.UNIT_LABELS)
+                            unit_order=mi.UNIT_ORDER, unit_labels=mi.UNIT_LABELS,
+                            datalist_opcoes=mi.opcoes_datalist(alimentos_custom))
 
 
 @app.route("/refeicao/<page_id>/remover", methods=["POST"])

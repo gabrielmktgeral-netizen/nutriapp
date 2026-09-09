@@ -3,7 +3,9 @@
 {% block title %}Registar refeição{% endblock %}
 {% block content %}
 <h1>🍽️ Registar refeição</h1>
-<p class="subtitle">Escolhe os alimentos e as quantidades. Ex: 1 dose de arroz, 150g de frango, meia lata de atum.</p>
+<p class="subtitle">Escreve o alimento (aparecem sugestões), a quantidade e a unidade. Ex: 1 dose de arroz, meia lata de atum.</p>
+
+{% include "_datalist_alimentos.html" %}
 
 <form method="post" class="card">
   <div class="field">
@@ -25,6 +27,8 @@
 
   <button class="btn" type="submit" style="margin-top:14px;">Calcular e guardar</button>
 </form>
+
+{% include "_criar_alimento.html" %}
 
 <form method="post" action="{{ url_for('nao_comi', tipo=tipo_padrao) }}">
   <button type="submit" class="btn btn-secondary">Não comi nada nesta refeição</button>
@@ -72,7 +76,7 @@
 
 <style>
   .item-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
-  .item-row select[name="chave"] { flex:2 1 160px; }
+  .item-row input[name="chave"] { flex:2 1 160px; }
   .item-row input[name="quantidade"] { flex:0 0 70px; }
   .item-row select[name="unidade"] { flex:1 1 130px; }
   .item-row .btn-remove {
@@ -85,7 +89,7 @@
     var cont = document.getElementById('itens-refeicao');
     var linhas = cont.querySelectorAll('.item-row');
     var nova = linhas[linhas.length - 1].cloneNode(true);
-    nova.querySelector('select[name="chave"]').selectedIndex = 0;
+    nova.querySelector('input[name="chave"]').value = '';
     nova.querySelector('input[name="quantidade"]').value = 1;
     nova.querySelector('select[name="unidade"]').selectedIndex = 0;
     cont.appendChild(nova);

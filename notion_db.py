@@ -42,6 +42,7 @@ DS_EXERCICIO = "818ab87d-0b92-46fb-ab11-e60b522b514d"
 DS_EXCLUIDOS = "3c33ec21-6415-4cbf-bea8-b73344b47112"
 DS_PUSH = "3f72858d-ef60-4fb0-a622-6b78c005f2e0"
 DS_RECEITAS_CUSTOM = "13b07843-bc4e-4f35-800c-e9164aa4f053"
+DS_ALIMENTOS_CUSTOM = "7d2edfc4-ee17-48d5-b09d-652b8784d006"
 
 
 def _headers():
@@ -470,6 +471,56 @@ def _receita_from_page(p):
         "gordura_g": _prop(p, "Gordura g", "number") or 0,
         "tags": [],
     }
+
+
+def _alimento_from_page(p):
+    return {
+        "page_id": p["id"],
+        "nome": _prop(p, "Nome", "title") or "",
+        "kcal": _prop(p, "Kcal", "number") or 0,
+        "proteina_g": _prop(p, "Proteina g", "number") or 0,
+        "hidratos_g": _prop(p, "Hidratos g", "number") or 0,
+        "gordura_g": _prop(p, "Gordura g", "number") or 0,
+    }
+
+
+def get_custom_foods():
+    cached = _cache_get("custom_foods")
+    if cached is not None:
+        return cached
+    results = _query(DS_ALIMENTOS_CUSTOM)
+    alimentos = [_alimento_from_page(p) for p in results]
+    _cache_set("custom_foods", alimentos)
+    return alimentos
+
+
+def add_custom_food(nome, kcal, proteina_g, hidratos_g, gordura_g):
+    properties = {
+        "Nome": {"title": [{"text": {"content": nome}}]},
+        "Kcal": {"number": round(kcal, 1)},
+        "Proteina g": {"number": round(proteina_g, 1)},
+        "Hidratos g": {"number": round(hidratos_g, 1)},
+        "Gordura g": {"number": round(gordura_g, 1)},
+    }
+    _cache_clear("custom_foods")
+    return _create_page(DS_ALIMENTOS_CUSTOM, properties)
+
+
+def update_custom_food(page_id, nome, kcal, proteina_g, hidratos_g, gordura_g):
+    properties = {
+        "Nome": {"title": [{"text": {"content": nome}}]},
+        "Kcal": {"number": round(kcal, 1)},
+        "Proteina g": {"number": round(proteina_g, 1)},
+        "Hidratos g": {"number": round(hidratos_g, 1)},
+        "Gordura g": {"number": round(gordura_g, 1)},
+    }
+    _cache_clear("custom_foods")
+    return _update_page(page_id, properties)
+
+
+def delete_custom_food(page_id):
+    _cache_clear("custom_foods")
+    return _delete_page(page_id)
 
 
 def get_custom_recipes():

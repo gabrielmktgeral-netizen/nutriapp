@@ -21,6 +21,7 @@ if USING_NOTION:
         get_push_subscriptions, add_push_subscription, delete_push_subscription,
         get_custom_recipes, add_custom_recipe, delete_custom_recipe,
         get_custom_recipe, update_custom_recipe,
+        get_custom_foods, add_custom_food, update_custom_food, delete_custom_food,
     )
     BACKEND_NAME = "Notion"
 else:
@@ -35,5 +36,6 @@ else:
         get_push_subscriptions, add_push_subscription, delete_push_subscription,
         get_custom_recipes, add_custom_recipe, delete_custom_recipe,
         get_custom_recipe, update_custom_recipe,
+        get_custom_foods, add_custom_food, update_custom_food, delete_custom_food,
     )
     BACKEND_NAME = "Local (ficheiro JSON, modo teste)"

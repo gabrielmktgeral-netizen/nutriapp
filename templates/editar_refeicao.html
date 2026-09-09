@@ -5,6 +5,8 @@
 <h1>✏️ Editar refeição</h1>
 <p class="subtitle">{{ meal_labels[meal.tipo][0] }} {{ meal_labels[meal.tipo][1] }} — {{ meal.data }}</p>
 
+{% include "_datalist_alimentos.html" %}
+
 <div class="card">
   <h2>Valores atuais</h2>
   <div class="macro-grid">
@@ -38,6 +40,8 @@
   <button class="btn" type="submit" style="margin-top:14px;">Guardar alterações</button>
 </form>
 
+{% include "_criar_alimento.html" %}
+
 <form method="post" action="{{ url_for('remover_refeicao', page_id=meal.page_id) }}">
   <input type="hidden" name="voltar" value="{{ voltar }}">
   <button type="submit" class="btn btn-danger">🗑️ Remover esta refeição</button>
@@ -45,7 +49,7 @@
 
 <style>
   .item-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
-  .item-row select[name="chave"] { flex:2 1 160px; }
+  .item-row input[name="chave"] { flex:2 1 160px; }
   .item-row input[name="quantidade"] { flex:0 0 70px; }
   .item-row select[name="unidade"] { flex:1 1 130px; }
   .item-row .btn-remove {
@@ -58,7 +62,7 @@
     var cont = document.getElementById('itens-refeicao');
     var linhas = cont.querySelectorAll('.item-row');
     var nova = linhas[linhas.length - 1].cloneNode(true);
-    nova.querySelector('select[name="chave"]').selectedIndex = 0;
+    nova.querySelector('input[name="chave"]').value = '';
     nova.querySelector('input[name="quantidade"]').value = 1;
     nova.querySelector('select[name="unidade"]').selectedIndex = 0;
     cont.appendChild(nova);

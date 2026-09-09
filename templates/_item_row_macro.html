@@ -1,11 +1,7 @@
 {% macro item_row(chave='', quantidade=1, unidade='dose') %}
 <div class="item-row">
-  <select name="chave" required>
-    <option value="" {{ 'selected' if not chave }} disabled>Escolhe o alimento…</option>
-    {% for key, label in food_choices %}
-      <option value="{{ key }}" {{ 'selected' if key==chave }}>{{ label }}</option>
-    {% endfor %}
-  </select>
+  <input type="text" name="chave" list="lista-alimentos" value="{{ chave }}"
+         placeholder="Escreve o alimento…" autocomplete="off" required>
   <input type="number" name="quantidade" value="{{ quantidade }}" min="0.5" step="0.5" required>
   <select name="unidade">
     {% for u in unit_order %}
