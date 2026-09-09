@@ -9,6 +9,7 @@ import nutrition_calc as nc
 from meal_parser import parse_meal_text
 from food_data import lookup as food_lookup
 from recipes import sugerir_receitas, find_recipe_by_name, RECIPES
+import meal_items as mi
 from workouts import get_workout_for_goal, youtube_search_url
 from exercise_planner import plano_diario, plano_semanal
 import push
@@ -197,13 +198,16 @@ def registar_refeicao():
     resultado = None
     if request.method == "POST":
         tipo = request.form["tipo"]
-        texto = request.form["texto"].strip()
-        if texto:
-            total, itens = parse_meal_text(texto)
-            db.add_meal(date.today().isoformat(), tipo, texto,
+        itens_form = mi.itens_do_formulario(request.form)
+        if itens_form:
+            total, itens = mi.calcular_itens(itens_form)
+            texto_canonico = mi.codificar(itens_form)
+            db.add_meal(date.today().isoformat(), tipo, texto_canonico,
                         total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
             resultado = {"total": total, "itens": itens}
             flash("Refeição registada! ✅", "success")
+        else:
+            flash("Escolhe pelo menos um alimento.", "error")
         tipo_padrao = tipo
 
     receitas_sugeridas = []
@@ -226,7 +230,9 @@ def registar_refeicao():
 
     return render_template("registar_refeicao.html", tipo_padrao=tipo_padrao,
                             meal_labels=nc.MEAL_LABELS, resultado=resultado,
-                            receitas_sugeridas=receitas_sugeridas)
+                            receitas_sugeridas=receitas_sugeridas,
+                            food_choices=mi.FOOD_CHOICES, unit_order=mi.UNIT_ORDER,
+                            unit_labels=mi.UNIT_LABELS)
 
 
 @app.route("/registar-refeicao/receita", methods=["POST"])
@@ -258,17 +264,24 @@ def editar_refeicao(page_id):
         return redirect(url_for("index"))
 
     if request.method == "POST":
-        texto = request.form.get("texto", "").strip()
-        if texto:
-            total, itens = parse_meal_text(texto)
-            db.update_meal(page_id, texto, total["kcal"], total["proteina_g"],
+        itens_form = mi.itens_do_formulario(request.form)
+        if itens_form:
+            total, itens = mi.calcular_itens(itens_form)
+            texto_canonico = mi.codificar(itens_form)
+            db.update_meal(page_id, texto_canonico, total["kcal"], total["proteina_g"],
                             total["hidratos_g"], total["gordura_g"])
             flash("Refeição atualizada! ✏️", "success")
+        else:
+            flash("Escolhe pelo menos um alimento.", "error")
         if voltar and voltar != "index":
             return redirect(url_for("dia", data_iso=voltar))
         return redirect(url_for("index"))
 
-    return render_template("editar_refeicao.html", meal=meal, meal_labels=nc.MEAL_LABELS, voltar=voltar)
+    itens_atuais = mi.descodificar(meal.get("texto_original"))
+    return render_template("editar_refeicao.html", meal=meal, meal_labels=nc.MEAL_LABELS, voltar=voltar,
+                            itens_atuais=itens_atuais,
+                            food_choices=mi.FOOD_CHOICES, unit_order=mi.UNIT_ORDER,
+                            unit_labels=mi.UNIT_LABELS)
 
 
 @app.route("/refeicao/<page_id>/remover", methods=["POST"])

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_item_row_macro.html" import item_row with context %}
 {% block title %}Editar refeição{% endblock %}
 {% block content %}
 <h1>✏️ Editar refeição</h1>
@@ -12,20 +13,70 @@
     <div class="macro-box"><div class="value">🍚 {{ meal.hidratos_g|round|int }}g</div><div class="label">hidratos</div></div>
     <div class="macro-box"><div class="value">🥑 {{ meal.gordura_g|round|int }}g</div><div class="label">gordura</div></div>
   </div>
-  <p class="subtitle" style="font-size:0.85rem;">⚠️ Se mudares o texto abaixo, estes valores são recalculados de novo.</p>
+  {% if not itens_atuais %}
+    <p class="subtitle" style="font-size:0.85rem;">⚠️ Esta refeição foi registada no formato antigo — escolhe os alimentos abaixo para a atualizar.</p>
+  {% else %}
+    <p class="subtitle" style="font-size:0.85rem;">Podes mudar os alimentos e quantidades abaixo.</p>
+  {% endif %}
 </div>
 
 <form method="post" class="card">
   <input type="hidden" name="voltar" value="{{ voltar }}">
   <div class="field">
     <label>O que comeste?</label>
-    <textarea name="texto" required>{{ meal.texto_original }}</textarea>
+    <div id="itens-refeicao">
+      {% if itens_atuais %}
+        {% for it in itens_atuais %}
+          {{ item_row(it.chave, it.quantidade, it.unidade) }}
+        {% endfor %}
+      {% else %}
+        {{ item_row() }}
+      {% endif %}
+    </div>
+    <button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="novaLinha()">+ Adicionar alimento</button>
   </div>
-  <button class="btn" type="submit">Guardar alterações</button>
+  <button class="btn" type="submit" style="margin-top:14px;">Guardar alterações</button>
 </form>
 
 <form method="post" action="{{ url_for('remover_refeicao', page_id=meal.page_id) }}">
   <input type="hidden" name="voltar" value="{{ voltar }}">
-  <button class="btn btn-danger" type="submit">🗑️ Remover esta refeição</button>
+  <button type="submit" class="btn btn-danger">🗑️ Remover esta refeição</button>
 </form>
+
+<style>
+  .item-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+  .item-row select[name="chave"] { flex:2 1 160px; }
+  .item-row input[name="quantidade"] { flex:0 0 70px; }
+  .item-row select[name="unidade"] { flex:1 1 130px; }
+  .item-row .btn-remove {
+    flex:0 0 auto; border:none; background:transparent; color:var(--red);
+    font-size:1.1rem; cursor:pointer; padding:4px 8px;
+  }
+</style>
+<script>
+  function novaLinha() {
+    var cont = document.getElementById('itens-refeicao');
+    var linhas = cont.querySelectorAll('.item-row');
+    var nova = linhas[linhas.length - 1].cloneNode(true);
+    nova.querySelector('select[name="chave"]').selectedIndex = 0;
+    nova.querySelector('input[name="quantidade"]').value = 1;
+    nova.querySelector('select[name="unidade"]').selectedIndex = 0;
+    cont.appendChild(nova);
+    atualizarBotoesRemover();
+  }
+  function removerLinha(btn) {
+    var cont = document.getElementById('itens-refeicao');
+    if (cont.querySelectorAll('.item-row').length > 1) {
+      btn.closest('.item-row').remove();
+    }
+    atualizarBotoesRemover();
+  }
+  function atualizarBotoesRemover() {
+    var linhas = document.querySelectorAll('#itens-refeicao .item-row');
+    linhas.forEach(function (l) {
+      l.querySelector('.btn-remove').style.visibility = linhas.length > 1 ? 'visible' : 'hidden';
+    });
+  }
+  atualizarBotoesRemover();
+</script>
 {% endblock %}

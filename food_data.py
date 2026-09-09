@@ -116,6 +116,16 @@ PORTION_G_DEFAULTS = {
 }
 PORTION_G_PADRAO = 150  # se o alimento não estiver na lista acima, assume 150g por dose
 
+# Gramas por lata (alimentos que costumam vir em lata, já escorridos).
+LATA_G_DEFAULTS = {
+    "atum": 120,
+    "feijao": 240,
+    "feijão": 240,
+    "grao": 240,
+    "grão": 240,
+}
+LATA_G_PADRAO = 120  # se o alimento não estiver na lista acima
+
 
 def lookup(food_name: str):
     key = food_name.strip().lower()
@@ -138,3 +148,14 @@ def portion_grams(food_name: str):
         if name in key or key in name:
             return grams
     return PORTION_G_PADRAO
+
+
+def lata_grams(food_name: str):
+    """Gramas para '1 lata' deste alimento (escorrido)."""
+    key = food_name.strip().lower()
+    if key in LATA_G_DEFAULTS:
+        return LATA_G_DEFAULTS[key]
+    for name, grams in LATA_G_DEFAULTS.items():
+        if name in key or key in name:
+            return grams
+    return LATA_G_PADRAO
