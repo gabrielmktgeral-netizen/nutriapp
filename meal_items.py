@@ -269,6 +269,21 @@ def itens_do_formulario(form):
     return itens
 
 
+def resumo_itens(texto, extra=None):
+    """Para mostrar 'quanto cada ingrediente pesa' numa refeição já guardada.
+    Devolve a lista de itens com os macros de cada um, ou None se o texto
+    não estiver no formato novo (refeição antiga em texto livre, receita, etc)."""
+    itens_guardados = descodificar(texto)
+    if itens_guardados is None:
+        return None
+    itens = []
+    for it in itens_guardados:
+        calc = calcular_item(it["chave"], it["quantidade"], it["unidade"], extra=extra)
+        if calc:
+            itens.append(calc)
+    return itens or None
+
+
 def codificar(itens):
     """Lista de {chave, quantidade, unidade} -> texto para guardar na base de dados."""
     return ";".join(f"{it['chave']}|{it['quantidade']}|{it['unidade']}" for it in itens)

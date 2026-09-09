@@ -45,7 +45,14 @@
         <span class="meal-name">
           {{ info[0] }} {{ info[1] }}
           {% if meal and meal.texto_original != 'Não comi nada' %}
-            <br><span class="subtitle" style="font-size:0.8rem; margin:0;">{{ meal.texto_original }}</span>
+            <br>
+            {% if meal.itens %}
+              <span class="subtitle" style="font-size:0.8rem; margin:0;">
+                {% for it in meal.itens %}{{ it.nome }}{% if not loop.last %}, {% endif %}{% endfor %}
+              </span>
+            {% elif not ('|' in (meal.texto_original or '')) %}
+              <span class="subtitle" style="font-size:0.8rem; margin:0;">{{ meal.texto_original }}</span>
+            {% endif %}
           {% endif %}
         </span>
         {% if meal %}
@@ -59,6 +66,18 @@
           <span class="meal-kcal">sem registo</span>
         {% endif %}
       </li>
+      {% if meal and meal.itens %}
+        <li style="padding-top:0;">
+          <ul class="item-list" style="width:100%; margin:0;">
+            {% for it in meal.itens %}
+              <li>
+                <span>{{ it.quantidade }} {{ it.unidade_label }} de {{ it.nome }} <span class="tag">{{ it.gramas }}g</span></span>
+                <span>{{ it.kcal|round|int }} kcal</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </li>
+      {% endif %}
     {% endfor %}
   </ul>
 </div>

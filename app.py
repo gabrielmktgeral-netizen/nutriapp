@@ -562,6 +562,9 @@ def dia(data_iso):
         totals["gordura_g"] += m["gordura_g"]
 
     targets = nc.macro_targets(profile) if profile else None
+    extra = mi.dict_custom(db.get_custom_foods()) if db.configured() else {}
+    for m in meals:
+        m["itens"] = mi.resumo_itens(m.get("texto_original"), extra=extra)
     meals_by_type = {"pequeno_almoco": None, "almoco": None, "lanche": None, "jantar": None}
     for m in meals:
         meals_by_type[m["tipo"]] = m
