@@ -73,6 +73,49 @@ UNIT_G_DEFAULTS = {
     "iogurte": 125,
 }
 
+# Quantos gramas tem "1 dose"/"1 porção" de cada alimento (porção normal para
+# uma pessoa). Usado quando a pessoa escreve "1 dose de arroz" em vez de gramas.
+PORTION_G_DEFAULTS = {
+    "arroz": 150,
+    "arroz integral": 150,
+    "massa": 150,
+    "esparguete": 150,
+    "batata": 200,
+    "batata doce": 150,
+    "batata frita": 150,
+    "pao": 50,
+    "pão": 50,
+    "pao integral": 50,
+    "aveia": 40,
+    "feijao": 150,
+    "feijão": 150,
+    "grao": 150,
+    "grão": 150,
+    "lentilhas": 150,
+    "frango": 150,
+    "peito de frango": 150,
+    "frango grelhado": 150,
+    "carne de vaca": 150,
+    "bife": 150,
+    "porco": 150,
+    "lombo de porco": 150,
+    "peixe": 150,
+    "salmao": 150,
+    "salmão": 150,
+    "atum": 100,
+    "bacalhau": 150,
+    "pescada": 150,
+    "queijo": 30,
+    "queijo fresco": 50,
+    "legumes": 150,
+    "brocolos": 150,
+    "brócolos": 150,
+    "iogurte": 125,
+    "iogurte grego": 125,
+    "iogurte natural": 125,
+}
+PORTION_G_PADRAO = 150  # se o alimento não estiver na lista acima, assume 150g por dose
+
 
 def lookup(food_name: str):
     key = food_name.strip().lower()
@@ -83,3 +126,15 @@ def lookup(food_name: str):
         if name in key or key in name:
             return vals
     return None
+
+
+def portion_grams(food_name: str):
+    """Gramas para '1 dose'/'1 porção' deste alimento (usa um valor por
+    omissão se o alimento não estiver na lista)."""
+    key = food_name.strip().lower()
+    if key in PORTION_G_DEFAULTS:
+        return PORTION_G_DEFAULTS[key]
+    for name, grams in PORTION_G_DEFAULTS.items():
+        if name in key or key in name:
+            return grams
+    return PORTION_G_PADRAO

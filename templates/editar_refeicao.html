@@ -4,6 +4,17 @@
 <h1>✏️ Editar refeição</h1>
 <p class="subtitle">{{ meal_labels[meal.tipo][0] }} {{ meal_labels[meal.tipo][1] }} — {{ meal.data }}</p>
 
+<div class="card">
+  <h2>Valores atuais</h2>
+  <div class="macro-grid">
+    <div class="macro-box"><div class="value">🔥 {{ meal.kcal|round|int }}</div><div class="label">kcal</div></div>
+    <div class="macro-box"><div class="value">🥩 {{ meal.proteina_g|round|int }}g</div><div class="label">proteína</div></div>
+    <div class="macro-box"><div class="value">🍚 {{ meal.hidratos_g|round|int }}g</div><div class="label">hidratos</div></div>
+    <div class="macro-box"><div class="value">🥑 {{ meal.gordura_g|round|int }}g</div><div class="label">gordura</div></div>
+  </div>
+  <p class="subtitle" style="font-size:0.85rem;">⚠️ Se mudares o texto abaixo, estes valores são recalculados de novo.</p>
+</div>
+
 <form method="post" class="card">
   <input type="hidden" name="voltar" value="{{ voltar }}">
   <div class="field">

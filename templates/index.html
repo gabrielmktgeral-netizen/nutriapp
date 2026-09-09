@@ -30,6 +30,21 @@
   </div>
 </div>
 
+{% if nota_nutricional %}
+<div class="assistant-box" style="border-color:var(--orange);">
+  <strong>📋 Nota nutricional (a cada 3 dias)</strong>
+  <p style="margin:8px 0 0;">{{ nota_nutricional.mensagem }}</p>
+  {% if nota_nutricional.sugestoes %}
+    <p style="margin:8px 0 0;"><strong>Sugestões ricas em proteína:</strong></p>
+    <ul style="margin:4px 0 0; padding-left:18px;">
+      {% for nome in nota_nutricional.sugestoes %}
+        <li>{{ nome }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+{% endif %}
+
 <div class="assistant-box">
   <strong>🤖 Assistente</strong>
   <p style="margin:8px 0 0;">

@@ -8,7 +8,7 @@ import data_store as db
 import nutrition_calc as nc
 from meal_parser import parse_meal_text
 from food_data import lookup as food_lookup
-from recipes import sugerir_receitas, find_recipe_by_name
+from recipes import sugerir_receitas, find_recipe_by_name, RECIPES
 from workouts import get_workout_for_goal, youtube_search_url
 from exercise_planner import plano_diario, plano_semanal
 import push
@@ -40,6 +40,31 @@ def week_bounds(ref_date):
     monday = ref_date - timedelta(days=ref_date.weekday())
     sunday = monday + timedelta(days=6)
     return monday, sunday
+
+
+def gerar_nota_periodica(targets, meals_ultimos_3_dias, excluidos_nomes=None):
+    """De 3 em 3 dias: analisa a média de proteína consumida e, se estiver
+    abaixo do objetivo, devolve uma nota com sugestões de receitas ricas
+    em proteína. Devolve None se não houver nada a assinalar."""
+    if not targets or not targets.get("protein_g"):
+        return None
+    dias = 3
+    media_prot = sum(m["proteina_g"] for m in meals_ultimos_3_dias) / dias
+    alvo = targets["protein_g"]
+    if media_prot >= alvo * 0.85:
+        return None
+
+    excluidos_nomes = set(excluidos_nomes or [])
+    candidatas = [r for r in RECIPES if r["nome"] not in excluidos_nomes]
+    candidatas = sorted(candidatas, key=lambda r: -r["proteina_g"])[:4]
+
+    return {
+        "mensagem": (
+            f"Nos últimos 3 dias comeste em média {round(media_prot)}g de proteína por dia "
+            f"(o teu objetivo é {alvo}g). Tenta incluir mais fontes de proteína nas refeições."
+        ),
+        "sugestoes": [r["nome"] for r in candidatas],
+    }
 
 
 @app.context_processor
@@ -106,12 +131,27 @@ def index():
 
     habitos = {tipo: (profile.get(campo) or "").strip() for tipo, campo in HABITO_CAMPO.items()}
 
+    # De 3 em 3 dias mostramos uma nota nutricional (sem precisar de guardar
+    # estado — o dia do ano garante que só aparece 1 em cada 3 dias).
+    nota_nutricional = None
+    if today.toordinal() % 3 == 0:
+        inicio = (today - timedelta(days=2)).isoformat()
+        meals_recentes = [m for m in week_meals if inicio <= m["data"] <= today_iso]
+        if inicio < monday.isoformat():
+            # os últimos 3 dias atravessam para a semana anterior — vai buscar essa parte
+            extra = db.get_meals_between(inicio, monday.isoformat())
+            vistos = {m["page_id"] for m in meals_recentes}
+            meals_recentes += [m for m in extra if m["page_id"] not in vistos]
+        excluidos_nomes = [e["nome"] for e in db.get_excluidos()]
+        nota_nutricional = gerar_nota_periodica(targets, meals_recentes, excluidos_nomes)
+
     return render_template(
         "index.html", profile=profile, totals=totals, targets=targets,
         meals_by_type=meals_by_type, meal_labels=nc.MEAL_LABELS,
         week_summary=week_summary, today=today_iso, habitos=habitos,
         restante_kcal=restante_kcal, restante_prot=restante_prot,
         goal_label=nc.GOAL_LABELS.get(profile.get("objetivo"), ""),
+        nota_nutricional=nota_nutricional,
     )
 
 

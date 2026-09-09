@@ -2,14 +2,17 @@
 Não é IA real, é um parser por regex + tabela local. Serve de base para depois
 ligar a um modelo de linguagem (ex: API da OpenAI/Anthropic) se desejado."""
 import re
-from food_data import lookup, UNIT_G_DEFAULTS
+from food_data import lookup, UNIT_G_DEFAULTS, portion_grams
 
 # separadores comuns de itens numa frase
 SPLIT_RE = re.compile(r"\s*(?:,| e | com |\+)\s*", flags=re.IGNORECASE)
 
-# "200g de frango", "200 g frango", "1 banana", "2 ovos", "uma fatia de pao"
+# unidades que significam "1 porção normal para uma pessoa"
+DOSE_UNITS = ("dose", "doses", "porcao", "porção", "porcoes", "porções")
+
+# "200g de frango", "200 g frango", "1 banana", "2 ovos", "uma fatia de pao", "1 dose de arroz"
 QTY_RE = re.compile(
-    r"^\s*(?P<qty>\d+[\.,]?\d*)\s*(?P<unit>g|gr|gramas|kg|ml|un|unidade|unidades)?\s*(?:de\s+)?(?P<food>.+?)\s*$",
+    r"^\s*(?P<qty>\d+[\.,]?\d*)\s*(?P<unit>g|gr|gramas|kg|ml|un|unidades|unidade|doses|dose|por[cç][oõ]es|por[cç][aã]o)?\s*(?:de\s+)?(?P<food>.+?)\s*$",
     flags=re.IGNORECASE,
 )
 
@@ -77,6 +80,10 @@ def _parse_item(part: str):
             elif unit in ("un", "unidade", "unidades"):
                 grams_per_unit = UNIT_G_DEFAULTS.get(food_name.lower(), 100)
                 qty_g = qty_val * grams_per_unit
+            elif unit.startswith("dose") or unit.startswith("por"):
+                # "1 dose de arroz" / "2 porções de frango" -> usa o tamanho
+                # normal de uma porção deste alimento (definido em food_data.py)
+                qty_g = qty_val * portion_grams(food_name)
 
     if qty_g is None:
         qty_g = 100  # assume 100g por omissão se não conseguir perceber quantidade

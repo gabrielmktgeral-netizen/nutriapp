@@ -18,6 +18,13 @@
 
 * { box-sizing: border-box; }
 
+html, body {
+  /* Impede o gesto nativo do telemóvel (avançar/recuar página) de "roubar"
+     o deslizar horizontal, para o nosso menu por swipe funcionar sempre. */
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+}
+
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
