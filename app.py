@@ -358,7 +358,7 @@ def editar_refeicao(page_id):
                 return redirect(url_for("dia", data_iso=voltar))
             return redirect(url_for("index"))
 
-    itens_atuais = mi.descodificar(meal.get("texto_original"))
+    itens_atuais = mi.resumo_itens(meal.get("texto_original"), extra=extra)
     return render_template("editar_refeicao.html", meal=meal, meal_labels=nc.MEAL_LABELS, voltar=voltar,
                             itens_atuais=itens_atuais,
                             unit_order=mi.UNIT_ORDER, unit_labels=mi.UNIT_LABELS,

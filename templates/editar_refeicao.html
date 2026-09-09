@@ -29,7 +29,7 @@
     <div id="itens-refeicao">
       {% if itens_atuais %}
         {% for it in itens_atuais %}
-          {{ item_row(it.chave, it.quantidade, it.unidade) }}
+          {{ item_row(it.chave, it.quantidade, it.unidade, it) }}
         {% endfor %}
       {% else %}
         {{ item_row() }}
@@ -56,6 +56,22 @@
     flex:0 0 auto; border:none; background:transparent; color:var(--red);
     font-size:1.1rem; cursor:pointer; padding:4px 8px;
   }
+  .info-icon {
+    position:relative; flex:0 0 auto; cursor:pointer; color:var(--green-dark);
+    font-size:1.05rem; padding:2px 4px;
+  }
+  .info-icon .tooltip {
+    display:none; position:absolute; bottom:135%; left:50%; transform:translateX(-50%);
+    background:var(--text); color:#fff; padding:8px 10px; border-radius:8px;
+    font-size:0.8rem; line-height:1.5; white-space:nowrap; z-index:5;
+    box-shadow:var(--shadow-hover);
+  }
+  /* rato: mostra ao passar por cima */
+  @media (hover: hover) {
+    .info-icon:hover .tooltip { display:block; }
+  }
+  /* toque: mostra ao clicar (classe adicionada por JS) */
+  .info-icon.aberto .tooltip { display:block; }
 </style>
 <script>
   function novaLinha() {
@@ -65,6 +81,8 @@
     nova.querySelector('input[name="chave"]').value = '';
     nova.querySelector('input[name="quantidade"]').value = 1;
     nova.querySelector('select[name="unidade"]').selectedIndex = 0;
+    var infoIcon = nova.querySelector('.info-icon');
+    if (infoIcon) infoIcon.remove();
     cont.appendChild(nova);
     atualizarBotoesRemover();
   }
@@ -82,5 +100,17 @@
     });
   }
   atualizarBotoesRemover();
+
+  // Toque no telemóvel: clicar no ⓘ abre/fecha o balão de informação.
+  // No rato, o CSS já trata disto ao passar por cima (não precisa de clicar).
+  document.addEventListener('click', function (e) {
+    var icon = e.target.closest ? e.target.closest('.info-icon') : null;
+    document.querySelectorAll('.info-icon.aberto').forEach(function (el) {
+      if (el !== icon) el.classList.remove('aberto');
+    });
+    if (icon) {
+      icon.classList.toggle('aberto');
+    }
+  });
 </script>
 {% endblock %}

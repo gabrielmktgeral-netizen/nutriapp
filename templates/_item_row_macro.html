@@ -1,4 +1,4 @@
-{% macro item_row(chave='', quantidade=1, unidade='dose') %}
+{% macro item_row(chave='', quantidade=1, unidade='dose', info=None) %}
 <div class="item-row">
   <input type="text" name="chave" list="lista-alimentos" value="{{ chave }}"
          placeholder="Escreve o alimento…" autocomplete="off" required>
@@ -8,6 +8,17 @@
       <option value="{{ u }}" {{ 'selected' if u==unidade }}>{{ unit_labels[u] }}</option>
     {% endfor %}
   </select>
+  {% if info %}
+    <span class="info-icon" tabindex="0">ⓘ
+      <span class="tooltip">
+        {{ info.gramas }}g<br>
+        🔥 {{ info.kcal|round|int }} kcal<br>
+        🥩 {{ info.proteina_g|round|int }}g proteína<br>
+        🍚 {{ info.hidratos_g|round|int }}g hidratos<br>
+        🥑 {{ info.gordura_g|round|int }}g gordura
+      </span>
+    </span>
+  {% endif %}
   <button type="button" class="btn-remove" onclick="removerLinha(this)" title="Remover">✕</button>
 </div>
 {% endmacro %}
