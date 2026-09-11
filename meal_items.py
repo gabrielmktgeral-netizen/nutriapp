@@ -187,6 +187,7 @@ def lista_completa(alimentos_custom):
             linhas.append({
                 "nome": override["nome"], "kcal": override["kcal"], "proteina_g": override["proteina_g"],
                 "hidratos_g": override["hidratos_g"], "gordura_g": override["gordura_g"],
+                "peso_unidade_g": override.get("peso_unidade_g"),
                 "page_id": override["page_id"], "personalizado": True,
             })
             vistos.add(override["nome"].strip().lower())
@@ -194,6 +195,7 @@ def lista_completa(alimentos_custom):
             kcal, prot, carb, fat = vals
             linhas.append({
                 "nome": label, "kcal": kcal, "proteina_g": prot, "hidratos_g": carb, "gordura_g": fat,
+                "peso_unidade_g": None,
                 "page_id": None, "personalizado": False,
             })
     for f in (alimentos_custom or []):
@@ -201,6 +203,7 @@ def lista_completa(alimentos_custom):
             linhas.append({
                 "nome": f["nome"], "kcal": f["kcal"], "proteina_g": f["proteina_g"],
                 "hidratos_g": f["hidratos_g"], "gordura_g": f["gordura_g"],
+                "peso_unidade_g": f.get("peso_unidade_g"),
                 "page_id": f["page_id"], "personalizado": True,
             })
     linhas.sort(key=lambda l: l["nome"].lower())
@@ -222,23 +225,35 @@ def dict_custom(alimentos_custom):
     }
 
 
-def grams_for(texto, quantidade, unidade):
+def dict_peso_unidade(alimentos_custom):
+    """{'nome em minúsculas': peso em gramas de '1 unidade'} — só para alimentos
+    personalizados onde a pessoa definiu esse peso ao criar o alimento."""
+    return {
+        f["nome"].strip().lower(): f["peso_unidade_g"]
+        for f in (alimentos_custom or [])
+        if f.get("peso_unidade_g")
+    }
+
+
+def grams_for(texto, quantidade, unidade, peso_unidade=None):
     if unidade == "g":
         return quantidade
     if unidade == "dose":
         return quantidade * fd.portion_grams(texto)
     if unidade == "unidade":
-        return quantidade * fd.UNIT_G_DEFAULTS.get(texto.strip().lower(), 100)
+        chave = texto.strip().lower()
+        gramas_unidade = (peso_unidade or {}).get(chave) or fd.UNIT_G_DEFAULTS.get(chave, 100)
+        return quantidade * gramas_unidade
     if unidade == "lata":
         return quantidade * fd.lata_grams(texto)
     return quantidade
 
 
-def calcular_item(texto, quantidade, unidade, extra=None):
+def calcular_item(texto, quantidade, unidade, extra=None, peso_unidade=None):
     vals = fd.lookup(texto, extra=extra)
     if vals is None or quantidade <= 0:
         return None
-    gramas = grams_for(texto, quantidade, unidade)
+    gramas = grams_for(texto, quantidade, unidade, peso_unidade=peso_unidade)
     kcal100, prot100, carb100, fat100 = vals
     factor = gramas / 100.0
     return {
@@ -255,14 +270,14 @@ def calcular_item(texto, quantidade, unidade, extra=None):
     }
 
 
-def calcular_itens(itens_form, extra=None):
+def calcular_itens(itens_form, extra=None, peso_unidade=None):
     """itens_form: lista de dicts {chave, quantidade, unidade}.
     Devolve (total, itens_reconhecidos, nao_reconhecidos)."""
     total = {"kcal": 0.0, "proteina_g": 0.0, "hidratos_g": 0.0, "gordura_g": 0.0}
     itens = []
     nao_reconhecidos = []
     for it in itens_form:
-        calc = calcular_item(it["chave"], it["quantidade"], it["unidade"], extra=extra)
+        calc = calcular_item(it["chave"], it["quantidade"], it["unidade"], extra=extra, peso_unidade=peso_unidade)
         if calc:
             itens.append(calc)
             total["kcal"] += calc["kcal"]
@@ -294,7 +309,7 @@ def itens_do_formulario(form):
     return itens
 
 
-def resumo_itens(texto, extra=None):
+def resumo_itens(texto, extra=None, peso_unidade=None):
     """Para mostrar 'quanto cada ingrediente pesa' numa refeição já guardada.
     Devolve a lista de itens com os macros de cada um, ou None se o texto
     não estiver no formato novo (refeição antiga em texto livre, receita, etc)."""
@@ -303,7 +318,7 @@ def resumo_itens(texto, extra=None):
         return None
     itens = []
     for it in itens_guardados:
-        calc = calcular_item(it["chave"], it["quantidade"], it["unidade"], extra=extra)
+        calc = calcular_item(it["chave"], it["quantidade"], it["unidade"], extra=extra, peso_unidade=peso_unidade)
         if calc:
             itens.append(calc)
     return itens or None

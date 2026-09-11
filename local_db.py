@@ -248,26 +248,28 @@ def get_custom_foods():
     return data.setdefault("custom_foods", [])
 
 
-def add_custom_food(nome, kcal, proteina_g, hidratos_g, gordura_g):
+def add_custom_food(nome, kcal, proteina_g, hidratos_g, gordura_g, peso_unidade_g=None):
     data = _load()
     foods = data.setdefault("custom_foods", [])
     item = {
         "page_id": str(uuid.uuid4()), "nome": nome,
         "kcal": round(kcal, 1), "proteina_g": round(proteina_g, 1),
         "hidratos_g": round(hidratos_g, 1), "gordura_g": round(gordura_g, 1),
+        "peso_unidade_g": round(peso_unidade_g, 1) if peso_unidade_g else None,
     }
     foods.append(item)
     _save(data)
     return item
 
 
-def update_custom_food(page_id, nome, kcal, proteina_g, hidratos_g, gordura_g):
+def update_custom_food(page_id, nome, kcal, proteina_g, hidratos_g, gordura_g, peso_unidade_g=None):
     data = _load()
     for f in data.setdefault("custom_foods", []):
         if f["page_id"] == page_id:
             f.update({
                 "nome": nome, "kcal": round(kcal, 1), "proteina_g": round(proteina_g, 1),
                 "hidratos_g": round(hidratos_g, 1), "gordura_g": round(gordura_g, 1),
+                "peso_unidade_g": round(peso_unidade_g, 1) if peso_unidade_g else None,
             })
             _save(data)
             return f

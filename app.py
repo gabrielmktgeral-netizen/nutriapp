@@ -203,13 +203,15 @@ def onboarding():
     profile = db.get_profile() if db.configured() else None
     habitos_resumo = {}
     if profile:
-        extra = mi.dict_custom(db.get_custom_foods()) if db.configured() else {}
+        alimentos_custom = db.get_custom_foods() if db.configured() else []
+        extra = mi.dict_custom(alimentos_custom)
+        peso_unidade = mi.dict_peso_unidade(alimentos_custom)
         for tipo, campo in HABITO_CAMPO.items():
             texto = (profile.get(campo) or "").strip()
             if not texto:
                 habitos_resumo[tipo] = None
             else:
-                itens = mi.resumo_itens(texto, extra=extra)
+                itens = mi.resumo_itens(texto, extra=extra, peso_unidade=peso_unidade)
                 habitos_resumo[tipo] = ", ".join(it["nome"] for it in itens) if itens else texto
     return render_template(
         "onboarding.html", profile=profile, habitos_resumo=habitos_resumo,
@@ -223,11 +225,12 @@ def registar_refeicao():
     resultado = None
     alimentos_custom = db.get_custom_foods() if db.configured() else []
     extra = mi.dict_custom(alimentos_custom)
+    peso_unidade = mi.dict_peso_unidade(alimentos_custom)
     if request.method == "POST":
         tipo = request.form["tipo"]
         itens_form = mi.itens_do_formulario(request.form)
         if itens_form:
-            total, itens, nao_reconhecidos = mi.calcular_itens(itens_form, extra=extra)
+            total, itens, nao_reconhecidos = mi.calcular_itens(itens_form, extra=extra, peso_unidade=peso_unidade)
             if itens:
                 texto_canonico = mi.codificar([it for it in itens_form if it["chave"] not in nao_reconhecidos])
                 db.add_meal(date.today().isoformat(), tipo, texto_canonico,
@@ -330,11 +333,13 @@ def criar_alimento():
         proteina = float((request.form.get("proteina") or "0").replace(",", "."))
         hidratos = float((request.form.get("hidratos") or "0").replace(",", "."))
         gordura = float((request.form.get("gordura") or "0").replace(",", "."))
+        peso_unidade_txt = (request.form.get("peso_unidade") or "").strip()
+        peso_unidade = float(peso_unidade_txt.replace(",", ".")) if peso_unidade_txt else None
     except ValueError:
         flash("Os valores têm de ser números.", "error")
         return voltar()
 
-    db.add_custom_food(nome, kcal, proteina, hidratos, gordura)
+    db.add_custom_food(nome, kcal, proteina, hidratos, gordura, peso_unidade_g=peso_unidade)
     flash(f"'{nome}' criado! Já podes escrever o nome dele na refeição. ✅", "success")
     return voltar()
 
@@ -357,15 +362,17 @@ def guardar_alimento():
         proteina = float((request.form.get("proteina") or "0").replace(",", "."))
         hidratos = float((request.form.get("hidratos") or "0").replace(",", "."))
         gordura = float((request.form.get("gordura") or "0").replace(",", "."))
+        peso_unidade_txt = (request.form.get("peso_unidade") or "").strip()
+        peso_unidade = float(peso_unidade_txt.replace(",", ".")) if peso_unidade_txt else None
     except ValueError:
         flash("Os valores têm de ser números.", "error")
         return redirect(url_for("gerir_alimentos"))
 
     if page_id:
-        db.update_custom_food(page_id, nome, kcal, proteina, hidratos, gordura)
+        db.update_custom_food(page_id, nome, kcal, proteina, hidratos, gordura, peso_unidade_g=peso_unidade)
         flash(f"'{nome}' atualizado! ✏️", "success")
     else:
-        db.add_custom_food(nome, kcal, proteina, hidratos, gordura)
+        db.add_custom_food(nome, kcal, proteina, hidratos, gordura, peso_unidade_g=peso_unidade)
         flash(f"'{nome}' guardado com os teus valores. ✅", "success")
     return redirect(url_for("gerir_alimentos"))
 
@@ -407,12 +414,13 @@ def editar_refeicao(page_id):
 
     alimentos_custom = db.get_custom_foods() if db.configured() else []
     extra = mi.dict_custom(alimentos_custom)
+    peso_unidade = mi.dict_peso_unidade(alimentos_custom)
 
     if request.method == "POST":
         itens_form = mi.itens_do_formulario(request.form)
         guardou = False
         if itens_form:
-            total, itens, nao_reconhecidos = mi.calcular_itens(itens_form, extra=extra)
+            total, itens, nao_reconhecidos = mi.calcular_itens(itens_form, extra=extra, peso_unidade=peso_unidade)
             if itens:
                 texto_canonico = mi.codificar([it for it in itens_form if it["chave"] not in nao_reconhecidos])
                 db.update_meal(page_id, texto_canonico, total["kcal"], total["proteina_g"],
@@ -429,7 +437,7 @@ def editar_refeicao(page_id):
                 return redirect(url_for("dia", data_iso=voltar))
             return redirect(url_for("index"))
 
-    itens_atuais = mi.resumo_itens(meal.get("texto_original"), extra=extra)
+    itens_atuais = mi.resumo_itens(meal.get("texto_original"), extra=extra, peso_unidade=peso_unidade)
     return render_template("editar_refeicao.html", meal=meal, meal_labels=nc.MEAL_LABELS, voltar=voltar,
                             itens_atuais=itens_atuais,
                             unit_order=mi.UNIT_ORDER, unit_labels=mi.UNIT_LABELS,
@@ -603,9 +611,10 @@ def registar_habitual(tipo):
 
     alimentos_custom = db.get_custom_foods() if db.configured() else []
     extra = mi.dict_custom(alimentos_custom)
+    peso_unidade = mi.dict_peso_unidade(alimentos_custom)
     itens_guardados = mi.descodificar(texto)
     if itens_guardados is not None:
-        total, itens, _nao_reconhecidos = mi.calcular_itens(itens_guardados, extra=extra)
+        total, itens, _nao_reconhecidos = mi.calcular_itens(itens_guardados, extra=extra, peso_unidade=peso_unidade)
     else:
         # formato antigo (texto livre escrito antes desta alteração)
         total, itens = parse_meal_text(texto)
@@ -624,6 +633,7 @@ def editar_habitual(tipo):
     profile = db.get_profile() or {}
     alimentos_custom = db.get_custom_foods() if db.configured() else []
     extra = mi.dict_custom(alimentos_custom)
+    peso_unidade = mi.dict_peso_unidade(alimentos_custom)
 
     if request.method == "POST":
         itens_form = mi.itens_do_formulario(request.form)
@@ -635,7 +645,7 @@ def editar_habitual(tipo):
         return redirect(url_for("onboarding"))
 
     texto_atual = (profile.get(campo) or "").strip()
-    itens_atuais = mi.resumo_itens(texto_atual, extra=extra) if texto_atual else None
+    itens_atuais = mi.resumo_itens(texto_atual, extra=extra, peso_unidade=peso_unidade) if texto_atual else None
     formato_antigo = bool(texto_atual) and itens_atuais is None
     return render_template(
         "editar_habitual.html", tipo=tipo, titulo=HABITO_LABEL.get(tipo, tipo),
@@ -662,9 +672,11 @@ def dia(data_iso):
         totals["gordura_g"] += m["gordura_g"]
 
     targets = nc.macro_targets(profile) if profile else None
-    extra = mi.dict_custom(db.get_custom_foods()) if db.configured() else {}
+    alimentos_custom_dia = db.get_custom_foods() if db.configured() else []
+    extra = mi.dict_custom(alimentos_custom_dia)
+    peso_unidade = mi.dict_peso_unidade(alimentos_custom_dia)
     for m in meals:
-        m["itens"] = mi.resumo_itens(m.get("texto_original"), extra=extra)
+        m["itens"] = mi.resumo_itens(m.get("texto_original"), extra=extra, peso_unidade=peso_unidade)
     meals_by_type = {"pequeno_almoco": None, "almoco": None, "lanche": None, "jantar": None}
     for m in meals:
         meals_by_type[m["tipo"]] = m

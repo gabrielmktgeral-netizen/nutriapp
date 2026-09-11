@@ -481,6 +481,7 @@ def _alimento_from_page(p):
         "proteina_g": _prop(p, "Proteina g", "number") or 0,
         "hidratos_g": _prop(p, "Hidratos g", "number") or 0,
         "gordura_g": _prop(p, "Gordura g", "number") or 0,
+        "peso_unidade_g": _prop(p, "Peso Unidade g", "number"),
     }
 
 
@@ -494,25 +495,27 @@ def get_custom_foods():
     return alimentos
 
 
-def add_custom_food(nome, kcal, proteina_g, hidratos_g, gordura_g):
+def add_custom_food(nome, kcal, proteina_g, hidratos_g, gordura_g, peso_unidade_g=None):
     properties = {
         "Nome": {"title": [{"text": {"content": nome}}]},
         "Kcal": {"number": round(kcal, 1)},
         "Proteina g": {"number": round(proteina_g, 1)},
         "Hidratos g": {"number": round(hidratos_g, 1)},
         "Gordura g": {"number": round(gordura_g, 1)},
+        "Peso Unidade g": {"number": round(peso_unidade_g, 1) if peso_unidade_g else None},
     }
     _cache_clear("custom_foods")
     return _create_page(DS_ALIMENTOS_CUSTOM, properties)
 
 
-def update_custom_food(page_id, nome, kcal, proteina_g, hidratos_g, gordura_g):
+def update_custom_food(page_id, nome, kcal, proteina_g, hidratos_g, gordura_g, peso_unidade_g=None):
     properties = {
         "Nome": {"title": [{"text": {"content": nome}}]},
         "Kcal": {"number": round(kcal, 1)},
         "Proteina g": {"number": round(proteina_g, 1)},
         "Hidratos g": {"number": round(hidratos_g, 1)},
         "Gordura g": {"number": round(gordura_g, 1)},
+        "Peso Unidade g": {"number": round(peso_unidade_g, 1) if peso_unidade_g else None},
     }
     _cache_clear("custom_foods")
     return _update_page(page_id, properties)
