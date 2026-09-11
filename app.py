@@ -37,6 +37,19 @@ _start_scheduler()
 
 DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 
+HABITO_CAMPO = {
+    "pequeno_almoco": "habito_pequeno_almoco",
+    "almoco": "habito_almoco",
+    "lanche": "habito_lanche",
+    "jantar": "habito_jantar",
+}
+HABITO_LABEL = {
+    "pequeno_almoco": "Pequeno-almoço habitual",
+    "almoco": "Almoço habitual",
+    "lanche": "Lanche habitual",
+    "jantar": "Jantar habitual",
+}
+
 
 def week_bounds(ref_date):
     monday = ref_date - timedelta(days=ref_date.weekday())
@@ -173,22 +186,33 @@ def onboarding():
             "hora_lanche": request.form.get("hora_lanche", "17:00"),
             "hora_jantar": request.form.get("hora_jantar", "20:00"),
             "hora_treino": request.form.get("hora_treino", ""),
-            "habito_pequeno_almoco": request.form.get("habito_pequeno_almoco", "").strip(),
-            "habito_almoco": request.form.get("habito_almoco", "").strip(),
-            "habito_lanche": request.form.get("habito_lanche", "").strip(),
-            "habito_jantar": request.form.get("habito_jantar", "").strip(),
             "pular_lembrete_pequeno_almoco": bool(request.form.get("pular_lembrete_pequeno_almoco")),
             "pular_lembrete_almoco": bool(request.form.get("pular_lembrete_almoco")),
             "pular_lembrete_lanche": bool(request.form.get("pular_lembrete_lanche")),
             "pular_lembrete_jantar": bool(request.form.get("pular_lembrete_jantar")),
         }
+        # as refeições habituais agora editam-se numa página própria (/perfil/habitual/<tipo>) —
+        # aqui mantemos os valores já guardados para não os apagar ao gravar o resto do perfil.
+        perfil_atual = db.get_profile() or {}
+        for campo in HABITO_CAMPO.values():
+            data[campo] = perfil_atual.get(campo, "")
         db.save_profile(data)
         flash("Perfil guardado! 🎉", "success")
         return redirect(url_for("index"))
 
     profile = db.get_profile() if db.configured() else None
+    habitos_resumo = {}
+    if profile:
+        extra = mi.dict_custom(db.get_custom_foods()) if db.configured() else {}
+        for tipo, campo in HABITO_CAMPO.items():
+            texto = (profile.get(campo) or "").strip()
+            if not texto:
+                habitos_resumo[tipo] = None
+            else:
+                itens = mi.resumo_itens(texto, extra=extra)
+                habitos_resumo[tipo] = ", ".join(it["nome"] for it in itens) if itens else texto
     return render_template(
-        "onboarding.html", profile=profile,
+        "onboarding.html", profile=profile, habitos_resumo=habitos_resumo,
         goal_labels=nc.GOAL_LABELS, activity_labels=nc.ACTIVITY_LABELS,
     )
 
@@ -567,14 +591,6 @@ def notificacoes_teste():
     return redirect(url_for("notificacoes"))
 
 
-HABITO_CAMPO = {
-    "pequeno_almoco": "habito_pequeno_almoco",
-    "almoco": "habito_almoco",
-    "lanche": "habito_lanche",
-    "jantar": "habito_jantar",
-}
-
-
 @app.route("/registar-habitual/<tipo>", methods=["POST"])
 def registar_habitual(tipo):
     profile = db.get_profile()
@@ -585,11 +601,48 @@ def registar_habitual(tipo):
         flash("Ainda não configuraste esta refeição habitual no Perfil.", "error")
         return redirect(url_for("index"))
 
-    total, itens = parse_meal_text(texto)
+    alimentos_custom = db.get_custom_foods() if db.configured() else []
+    extra = mi.dict_custom(alimentos_custom)
+    itens_guardados = mi.descodificar(texto)
+    if itens_guardados is not None:
+        total, itens, _nao_reconhecidos = mi.calcular_itens(itens_guardados, extra=extra)
+    else:
+        # formato antigo (texto livre escrito antes desta alteração)
+        total, itens = parse_meal_text(texto)
+
     db.add_meal(date.today().isoformat(), tipo, texto,
                 total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
     flash("Refeição habitual registada! ⚡", "success")
     return redirect(url_for("index"))
+
+
+@app.route("/perfil/habitual/<tipo>", methods=["GET", "POST"])
+def editar_habitual(tipo):
+    if tipo not in HABITO_CAMPO:
+        return redirect(url_for("onboarding"))
+    campo = HABITO_CAMPO[tipo]
+    profile = db.get_profile() or {}
+    alimentos_custom = db.get_custom_foods() if db.configured() else []
+    extra = mi.dict_custom(alimentos_custom)
+
+    if request.method == "POST":
+        itens_form = mi.itens_do_formulario(request.form)
+        texto_canonico = mi.codificar(itens_form) if itens_form else ""
+        novo_profile = dict(profile)
+        novo_profile[campo] = texto_canonico
+        db.save_profile(novo_profile)
+        flash("Refeição habitual guardada! ⚡", "success")
+        return redirect(url_for("onboarding"))
+
+    texto_atual = (profile.get(campo) or "").strip()
+    itens_atuais = mi.resumo_itens(texto_atual, extra=extra) if texto_atual else None
+    formato_antigo = bool(texto_atual) and itens_atuais is None
+    return render_template(
+        "editar_habitual.html", tipo=tipo, titulo=HABITO_LABEL.get(tipo, tipo),
+        itens_atuais=itens_atuais, texto_atual=texto_atual, formato_antigo=formato_antigo,
+        unit_order=mi.UNIT_ORDER, unit_labels=mi.UNIT_LABELS,
+        datalist_opcoes=mi.opcoes_datalist(alimentos_custom),
+    )
 
 
 @app.route("/dia/<data_iso>")

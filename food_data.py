@@ -225,6 +225,10 @@ UNIT_G_DEFAULTS = {
     "pao de hamburguer": 60,
     "pão de hambúrguer": 60,
     "filetes": 100,
+    "pao": 50,
+    "pão": 50,
+    "pao integral": 50,
+    "pão integral": 50,
 }
 
 # Quantos gramas tem "1 dose"/"1 porção" de cada alimento (porção normal para

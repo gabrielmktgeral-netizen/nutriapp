@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "_item_row_macro.html" import item_row with context %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block content %}
+<h1>⚡ {{ titulo }}</h1>
+<p class="subtitle">O que costumas comer nesta refeição. Depois tens um botão "Registar num clique" no menu Hoje.</p>
+
+{% include "_datalist_alimentos.html" %}
+
+{% if formato_antigo %}
+<div class="card">
+  <p class="subtitle" style="font-size:0.85rem;">⚠️ Isto estava guardado no formato antigo ("{{ texto_atual }}"). Escolhe os alimentos abaixo para atualizar.</p>
+</div>
+{% endif %}
+
+<form method="post" class="card">
+  <div class="field">
+    <label>Alimentos</label>
+    <div id="itens-habitual">
+      {% if itens_atuais %}
+        {% for it in itens_atuais %}
+          {{ item_row(it.chave, it.quantidade, it.unidade, it) }}
+        {% endfor %}
+      {% else %}
+        {{ item_row() }}
+      {% endif %}
+    </div>
+    <button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="novaLinha()">+ Adicionar alimento</button>
+  </div>
+  <button class="btn" type="submit" style="margin-top:14px;">Guardar</button>
+</form>
+
+{% include "_criar_alimento.html" %}
+
+<a href="{{ url_for('onboarding') }}" style="display:inline-block; margin-top:10px; font-size:0.85rem;">← Voltar ao perfil</a>
+
+<style>
+  .item-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+  .item-row input[name="chave"] { flex:2 1 160px; }
+  .item-row input[name="quantidade"] { flex:0 0 70px; }
+  .item-row select[name="unidade"] { flex:1 1 130px; }
+  .item-row .btn-remove {
+    flex:0 0 auto; border:none; background:transparent; color:var(--red);
+    font-size:1.1rem; cursor:pointer; padding:4px 8px;
+  }
+  .info-icon {
+    position:relative; flex:0 0 auto; cursor:pointer; color:var(--green-dark);
+    font-size:1.05rem; padding:2px 4px;
+  }
+  .info-icon .tooltip {
+    display:none; position:absolute; bottom:135%; left:50%; transform:translateX(-50%);
+    background:var(--text); color:#fff; padding:8px 10px; border-radius:8px;
+    font-size:0.8rem; line-height:1.5; white-space:nowrap; z-index:5;
+    box-shadow:var(--shadow-hover);
+  }
+  @media (hover: hover) {
+    .info-icon:hover .tooltip { display:block; }
+  }
+  .info-icon.aberto .tooltip { display:block; }
+</style>
+<script>
+  function novaLinha() {
+    var cont = document.getElementById('itens-habitual');
+    var linhas = cont.querySelectorAll('.item-row');
+    var nova = linhas[linhas.length - 1].cloneNode(true);
+    nova.querySelector('input[name="chave"]').value = '';
+    nova.querySelector('input[name="quantidade"]').value = 1;
+    nova.querySelector('select[name="unidade"]').selectedIndex = 0;
+    var infoIcon = nova.querySelector('.info-icon');
+    if (infoIcon) infoIcon.remove();
+    cont.appendChild(nova);
+    atualizarBotoesRemover();
+  }
+  function removerLinha(btn) {
+    var cont = document.getElementById('itens-habitual');
+    if (cont.querySelectorAll('.item-row').length > 1) {
+      btn.closest('.item-row').remove();
+    }
+    atualizarBotoesRemover();
+  }
+  function atualizarBotoesRemover() {
+    var linhas = document.querySelectorAll('#itens-habitual .item-row');
+    linhas.forEach(function (l) {
+      l.querySelector('.btn-remove').style.visibility = linhas.length > 1 ? 'visible' : 'hidden';
+    });
+  }
+  atualizarBotoesRemover();
+
+  document.addEventListener('click', function (e) {
+    var icon = e.target.closest ? e.target.closest('.info-icon') : null;
+    document.querySelectorAll('.info-icon.aberto').forEach(function (el) {
+      if (el !== icon) el.classList.remove('aberto');
+    });
+    if (icon) {
+      icon.classList.toggle('aberto');
+    }
+  });
+</script>
+{% endblock %}

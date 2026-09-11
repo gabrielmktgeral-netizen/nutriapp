@@ -81,29 +81,22 @@
 
   <h2 style="margin-top:20px;">⚡ Refeições habituais</h2>
   <p class="subtitle" style="margin-top:-6px;">
-    O que costumas comer nesta refeição, quase sempre? Preenche e depois tens um botão para
+    O que costumas comer nesta refeição, quase sempre? Configura e depois tens um botão para
     registar num clique, sem escrever tudo outra vez. Deixa em branco se varia muito.
   </p>
-  <div class="field">
-    <label>Pequeno-almoço habitual</label>
-    <input type="text" name="habito_pequeno_almoco" placeholder="ex: 2 ovos mexidos com pão"
-           value="{{ profile.habito_pequeno_almoco if profile else '' }}">
+  {% for tipo, label in [("pequeno_almoco", "Pequeno-almoço"), ("almoco", "Almoço"), ("lanche", "Lanche"), ("jantar", "Jantar")] %}
+  <div class="field" style="flex-direction:row; align-items:center; justify-content:space-between; gap:8px;">
+    <span>
+      <strong>{{ label }}:</strong>
+      {% if habitos_resumo and habitos_resumo.get(tipo) %}
+        {{ habitos_resumo[tipo] }}
+      {% else %}
+        <span class="subtitle" style="margin:0;">não configurado</span>
+      {% endif %}
+    </span>
+    <a href="{{ url_for('editar_habitual', tipo=tipo) }}" class="btn btn-sm btn-outline" style="flex-shrink:0;">✏️ Editar</a>
   </div>
-  <div class="field">
-    <label>Almoço habitual</label>
-    <input type="text" name="habito_almoco" placeholder="ex: 150g frango grelhado com arroz"
-           value="{{ profile.habito_almoco if profile else '' }}">
-  </div>
-  <div class="field">
-    <label>Lanche habitual</label>
-    <input type="text" name="habito_lanche" placeholder="ex: iogurte com fruta"
-           value="{{ profile.habito_lanche if profile else '' }}">
-  </div>
-  <div class="field">
-    <label>Jantar habitual</label>
-    <input type="text" name="habito_jantar" placeholder="ex: sopa de legumes com peixe"
-           value="{{ profile.habito_jantar if profile else '' }}">
-  </div>
+  {% endfor %}
 
   <h2 style="margin-top:20px;">🔕 Lembretes</h2>
   <p class="subtitle" style="margin-top:-6px;">
