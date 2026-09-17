@@ -1,113 +1,67 @@
-{% extends "base.html" %}
-{% block title %}Sugestão{% endblock %}
-{% block content %}
-<h1>🤖 O que posso comer agora?</h1>
+{% extends "base_organic.html" %}
 
-<div class="assistant-box">
-  <p style="margin:0;">
-    Ainda tens <strong>{{ restante_kcal }} kcal</strong> e <strong>{{ restante_prot }}g de proteína</strong> disponíveis hoje.
-  </p>
-</div>
+{% block titulo %}Sugestões · NutriApp{% endblock %}
+{% block cabecalho %}Sugestões{% endblock %}
+{% block subcabecalho %}Com o que tens em casa{% endblock %}
 
-<div class="card" style="font-size:0.85rem;">
-  <strong>Como escolho estas receitas:</strong>
-  <ol style="padding-left:18px; margin:8px 0 0;">
-    <li>Lista de 54 receitas portuguesas/mediterrânicas, escritas por nós — sempre em português.</li>
-    <li>Só aparecem receitas que já dás mesmo para fazer: tens tudo, ou falta só 1 ingrediente.</li>
-    <li>Ignoro por completo receitas com alimentos que marcaste como "não gosto".</li>
-  </ol>
-</div>
+{% block conteudo %}
 
-{% macro receita_card(s) %}
-  {% set r = s.receita %}
-  <div class="card">
-    <h2>🍽️ {{ r.nome }}</h2>
-    <div class="macro-grid" style="margin-bottom:14px;">
-      <div class="macro-box"><div class="value">🔥 {{ r.kcal }}</div><div class="label">kcal</div></div>
-      <div class="macro-box"><div class="value">🥩 {{ r.proteina_g }}g</div><div class="label">proteína</div></div>
-      <div class="macro-box"><div class="value">🍚 {{ r.hidratos_g }}g</div><div class="label">hidratos</div></div>
-      <div class="macro-box"><div class="value">🥑 {{ r.gordura_g }}g</div><div class="label">gordura</div></div>
-    </div>
-
-    <h2>Ingredientes</h2>
-    <ul class="item-list">
-      {% for ing in r.ingredientes %}
-        <li><span>{{ ing }}</span></li>
-      {% endfor %}
-    </ul>
-
-    <h2 style="margin-top:14px;">Preparo</h2>
-    <ol style="padding-left:20px; margin:0;">
-      {% for passo in r.preparo %}
-        <li style="margin-bottom:6px;">{{ passo }}</li>
-      {% endfor %}
-    </ol>
-
-    {% if s.faltam|length == 0 %}
-      <p class="subtitle" style="font-size:0.85rem; margin-top:12px; color:var(--green);">✅ Já tens tudo o que precisas em casa.</p>
-    {% else %}
-      <p class="subtitle" style="font-size:0.85rem; margin-top:12px;">🛒 Só falta: {{ s.faltam|join(', ') }}</p>
-    {% endif %}
+  <div class="card-lg card-sage">
+    <span class="kicker kicker-sage">Ainda disponível hoje</span>
+    <p class="num" style="font-size:19px;color:var(--s900);margin-top:4px">
+      {{ disponivel.kcal }} kcal · {{ disponivel.proteina }} g de proteína
+    </p>
   </div>
-{% endmacro %}
 
-<h2 style="margin: 20px 0 4px;">✅ Prontas a fazer</h2>
-{% for s in receitas_prontas %}
-  {{ receita_card(s) }}
-{% else %}
-  <div class="card"><p class="subtitle">Ainda não tens tudo para nenhuma receita. Adiciona mais alimentos à Despensa.</p></div>
-{% endfor %}
-
-<h2 style="margin: 24px 0 4px;">✨ Quase lá!</h2>
-<p class="subtitle" style="margin-top:0;">Só te falta comprar 1 ingrediente para cada uma destas.</p>
-{% for s in receitas_quase %}
-  {{ receita_card(s) }}
-{% else %}
-  <div class="card"><p class="subtitle">Nada aqui por agora.</p></div>
-{% endfor %}
-
-<div class="card">
-  <h2>➕ Adicionar à despensa</h2>
-  <form method="post" class="two-col" style="align-items:end;">
-    <input type="hidden" name="acao" value="add_pantry">
-    <div class="field">
-      <label>Alimento</label>
-      <input type="text" name="nome" placeholder="ex: frango" required>
+  <div class="cols-2">
+    <div class="stack">
+      <span class="section-label">Prontas a fazer</span>
+      {% for r in prontas %}
+        <div class="tile">
+          <div class="tile-head">
+            <span class="t">{{ r.nome }}</span>
+            <span class="k">{{ r.kcal }} kcal</span>
+          </div>
+          <span class="macro-line">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
+          <div class="foot">
+            <span class="pill">Tens tudo em casa</span>
+            <form method="post" action="{{ url_for('registar_receita') }}">
+              <input type="hidden" name="receita_id" value="{{ r.id }}">
+              <button class="btn btn-primary btn-sm" type="submit">Registar</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <p class="muted">Nada pronto a fazer com o que tens em casa. Adiciona alimentos à despensa.</p>
+      {% endfor %}
     </div>
-    <div class="field">
-      <label>Quantidade (opcional)</label>
-      <input type="text" name="quantidade" placeholder="ex: 500g">
-    </div>
-    <button class="btn" type="submit" style="grid-column: 1 / -1;">Adicionar</button>
-  </form>
-  <p class="subtitle" style="font-size:0.85rem; margin-top:10px;">
-    Tens {{ pantry|length }} item(ns) na despensa. <a href="{{ url_for('despensa') }}">Gerir despensa →</a>
-  </p>
-</div>
 
-<div class="card">
-  <h2>🚫 Não gosto / não quero ver</h2>
-  <p class="subtitle" style="margin-bottom:10px;">Alimentos aqui deixam de aparecer em qualquer sugestão.</p>
-  <form method="post" class="two-col" style="align-items:end;">
-    <input type="hidden" name="acao" value="add_excluido">
-    <div class="field">
-      <label>Alimento a excluir</label>
-      <input type="text" name="nome_excluido" placeholder="ex: brocolos" required>
+    <div class="stack">
+      <span class="section-label accent">Quase lá</span>
+      {% for r in quase_la %}
+        <div class="tile">
+          <div class="tile-head">
+            <span class="t">{{ r.nome }}</span>
+            <span class="k">{{ r.kcal }} kcal</span>
+          </div>
+          <span class="macro-line">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
+          <div class="foot">
+            <span class="pill pill-accent">Falta {{ r.falta }}</span>
+            <form method="post" action="{{ url_for('lista_compras') }}">
+              <input type="hidden" name="receita_id" value="{{ r.id }}">
+              <button class="btn btn-secondary btn-sm" type="submit">+ à despensa</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <p class="muted">Nada quase pronto de momento.</p>
+      {% endfor %}
     </div>
-    <button class="btn btn-danger" type="submit">Excluir</button>
-  </form>
+  </div>
 
-  {% if excluidos %}
-  <ul class="meal-list" style="margin-top:12px;">
-    {% for e in excluidos %}
-      <li>
-        <span class="meal-name">{{ e.nome }}</span>
-        <form method="post" action="{{ url_for('remover_excluido', page_id=e.page_id) }}">
-          <button class="btn btn-sm btn-outline" type="submit">Voltar a permitir</button>
-        </form>
-      </li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-</div>
+  <div class="row" style="border-top:1px solid var(--divider);padding-top:12px;flex-wrap:wrap;">
+    <span style="font-size:12px;font-weight:700;color:var(--n800)">{{ despensa_total }} itens na despensa</span>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('despensa') }}" style="margin-left:auto">Gerir despensa</a>
+  </div>
+
 {% endblock %}

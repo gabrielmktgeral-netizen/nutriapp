@@ -1,0 +1,165 @@
+{% extends "base_organic.html" %}
+
+{% block titulo %}Hoje · NutriApp{% endblock %}
+{% block cabecalho %}Hoje{% endblock %}
+{% block subcabecalho %}{{ dia.data_legivel }} · {{ perfil.objetivo }}{% endblock %}
+
+{% block conteudo %}
+
+  {# ===== Anel de calorias + macros =====
+     O anel é desenhado no servidor: perímetro = 2·π·52 = 326.73.
+     `dia.pct` é 0-1, calculado na view. #}
+  <div class="today">
+    <div class="ring">
+      <svg viewBox="0 0 124 124" aria-hidden="true">
+        <circle class="track" cx="62" cy="62" r="52"></circle>
+        <circle class="bar" cx="62" cy="62" r="52"
+                stroke-dasharray="326.73"
+                stroke-dashoffset="{{ (326.73 * (1 - dia.pct)) | round(1) }}"></circle>
+      </svg>
+      <div class="val">
+        <strong>{{ dia.kcal }}</strong>
+        <span>de {{ objetivo.kcal }} kcal</span>
+      </div>
+    </div>
+    <div class="macros">
+      {% for m in dia.macros %}
+        <div>
+          <div class="macro-head">
+            <span>{{ m.nome }}</span>
+            <span>{{ m.valor }}/{{ m.meta }} g</span>
+          </div>
+          <div class="meter {{ m.classe }}">
+            <i style="width: {{ m.pct }}%"></i>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ===== Peso + treino de hoje =====
+     Ainda não há histórico de peso guardado — mostra só o peso atual do perfil. #}
+  <div class="duo">
+    <a class="card" href="{{ url_for('onboarding') }}" style="color:inherit">
+      <span class="kicker">Peso</span>
+      <span class="big">{{ peso.atual }}</span>
+      {% if peso.pontos %}
+        <svg viewBox="0 0 140 46" aria-label="Evolução do peso">
+          <polyline class="spark" points="{{ peso.pontos }}"></polyline>
+          {% if peso.ultimo %}
+            <circle cx="{{ peso.ultimo.x }}" cy="{{ peso.ultimo.y }}" r="4" fill="#56633f"></circle>
+          {% endif %}
+        </svg>
+      {% endif %}
+      <span class="delta">{{ peso.variacao }}</span>
+    </a>
+    <div class="card">
+      <span class="kicker">Treino de hoje</span>
+      <span class="plan">{{ treino.nome }}</span>
+      <p class="muted">{{ treino.detalhe }}</p>
+      <a class="go" href="{{ url_for('exercicio') }}">Iniciar →</a>
+    </div>
+  </div>
+
+  {# ===== Refeições: <details> nativo, abre ao clicar ===== #}
+  <div class="meals-block stack">
+    <div class="meals">
+      {% for r in dia.refeicoes %}
+        <details class="meal" {% if r.tipo_slug == abrir %}open{% endif %}>
+          <summary>
+            <span class="ico{% if not r.registada %} is-empty{% endif %}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icone }}"></path></svg>
+            </span>
+            <span class="grow">
+              <span class="name">{{ r.tipo }}</span><br>
+              <span class="muted">
+                {% if r.saltada %}
+                  Não comeste esta refeição
+                {% elif r.itens %}
+                  {{ r.itens | length }} {{ 'alimento' if r.itens | length == 1 else 'alimentos' }}
+                {% else %}
+                  Ainda não registaste
+                {% endif %}
+              </span>
+            </span>
+            <span class="kcal">{% if r.saltada %}não comeste{% elif r.registada %}{{ r.kcal }} kcal{% else %}—{% endif %}</span>
+            <span class="chev">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+            </span>
+          </summary>
+          <div class="body">
+            {% for i in r.itens %}
+              <div class="item">{{ i.nome }}<span>{{ i.kcal }} kcal</span></div>
+            {% endfor %}
+            <div class="acts">
+              {% if r.registada %}
+                {% if not r.saltada %}
+                  <span class="pill pill-plain">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
+                {% endif %}
+                <a class="btn btn-ghost btn-sm" href="{{ r.editar_href }}">Editar</a>
+              {% else %}
+                <a class="btn btn-primary btn-sm" href="{{ r.registar_href }}">Registar agora</a>
+                <form method="post" action="{{ r.nao_comi_href }}">
+                  <button class="btn btn-secondary btn-sm" type="submit">Não comi</button>
+                </form>
+                {% if r.habitual_href %}
+                  <form method="post" action="{{ r.habitual_href }}">
+                    <button class="btn btn-secondary btn-sm" type="submit">⚡ Habitual</button>
+                  </form>
+                {% endif %}
+                {% if r.duplicar_origens %}
+                  <form method="post" action="{{ url_for('duplicar_refeicao') }}" class="acts" style="gap:6px;">
+                    <input type="hidden" name="tipo_destino" value="{{ r.tipo_slug }}">
+                    <select name="tipo_origem" style="font-size:0.8rem; border-radius:8px;">
+                      {% for t2, label2 in r.duplicar_origens %}
+                        <option value="{{ t2 }}">{{ label2 }}</option>
+                      {% endfor %}
+                    </select>
+                    <button class="btn btn-secondary btn-sm" type="submit">📋 Duplicar</button>
+                  </form>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ===== Semana ===== #}
+  <div class="week-block stack">
+    <span class="section-label">Esta semana</span>
+    <div class="week">
+      {% for d in semana %}
+        <a href="{{ d.href }}" style="text-decoration:none; color:inherit;" class="{% if d.hoje %}is-today{% endif %}">
+          <i style="height: {{ d.pct }}%"></i>
+          <b>{{ d.dia }}</b>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if nota_nutricional %}
+    <div class="week-block stack">
+      <span class="section-label">📋 Nota nutricional (a cada 3 dias)</span>
+      <p class="muted" style="margin:0;">{{ nota_nutricional.mensagem }}</p>
+      {% if nota_nutricional.sugestoes %}
+        <p class="muted" style="margin:6px 0 0;"><strong>Sugestões ricas em proteína:</strong></p>
+        <ul class="muted" style="margin:4px 0 0; padding-left:18px;">
+          {% for nome in nota_nutricional.sugestoes %}
+            <li>{{ nome }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {# ===== Ação rápida ===== #}
+  <div class="cta-block">
+    <a class="btn btn-primary btn-block btn-fab" href="{{ proxima_refeicao_href }}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+      Adicionar refeição
+    </a>
+  </div>
+
+{% endblock %}

@@ -1,39 +1,63 @@
-{% extends "base.html" %}
-{% block title %}Despensa{% endblock %}
-{% block content %}
-<a href="{{ url_for('onboarding') }}" style="color:var(--muted); text-decoration:none; font-size:0.9rem;">← Voltar ao perfil</a>
-<h1>🧊 O que tenho em casa</h1>
-<p class="subtitle">Adiciona os alimentos que tens disponíveis.</p>
+{% extends "base_organic.html" %}
 
-<form method="post" class="card two-col" style="align-items:end;">
-  <div class="field">
-    <label>Alimento</label>
-    <input type="text" name="nome" placeholder="ex: frango" required>
+{% block titulo %}Despensa · NutriApp{% endblock %}
+{% block cabecalho %}Despensa{% endblock %}
+{% block subcabecalho %}{{ alimentos | length }} itens em casa{% endblock %}
+
+{% block conteudo %}
+
+  <form class="row" method="post" action="{{ url_for('despensa') }}" style="flex-wrap:wrap;">
+    <label class="input-pill grow" style="min-width:180px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2.75" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+      <span class="sr">Novo alimento</span>
+      <input type="text" name="nome" placeholder="Adicionar alimento…" autocomplete="off" required>
+    </label>
+    <input type="text" name="quantidade" placeholder="quantidade (opcional)" style="max-width:140px;flex:1;min-width:120px;" class="input-pill">
+    <button class="btn btn-primary" type="submit">Adicionar</button>
+  </form>
+
+  <div class="cols-2">
+    <div class="stack">
+      {% for f in alimentos %}
+        <div class="line">
+          <span class="bullet"></span>
+          <span class="grow">
+            <span class="name">{{ f.nome }}</span><br>
+            {% if f.quantidade %}<span class="muted">{{ f.quantidade }}</span>{% endif %}
+          </span>
+          <form method="post" action="{{ url_for('remover_despensa', page_id=f.page_id) }}">
+            <button class="bell" type="submit" aria-label="Remover {{ f.nome }} da despensa">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>
+            </button>
+          </form>
+        </div>
+      {% else %}
+        <p class="muted">A despensa está vazia. Adiciona o que tens em casa para receberes sugestões.</p>
+      {% endfor %}
+    </div>
+
+    <div class="stack">
+      <span class="section-label accent">Não gosto / não quero ver</span>
+      <p class="muted">Estes alimentos deixam de aparecer em qualquer sugestão.</p>
+      <div class="row" style="flex-wrap:wrap;gap:7px">
+        {% for e in excluidos %}
+          <form method="post" action="{{ url_for('remover_excluido', page_id=e.page_id) }}">
+            <button class="pill pill-accent chip-x" type="submit" aria-label="Voltar a mostrar {{ e.nome }}">
+              {{ e.nome }}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>
+            </button>
+          </form>
+        {% endfor %}
+      </div>
+
+      <form class="row" method="post" action="{{ url_for('adicionar_excluido') }}" style="margin-top:4px;flex-wrap:wrap;">
+        <label class="input-pill grow">
+          <span class="sr">Alimento a excluir</span>
+          <input type="text" name="nome" placeholder="Excluir um alimento…" autocomplete="off" required>
+        </label>
+        <button class="btn btn-secondary" type="submit">Excluir</button>
+      </form>
+    </div>
   </div>
-  <div class="field">
-    <label>Quantidade (opcional)</label>
-    <input type="text" name="quantidade" placeholder="ex: 500g">
-  </div>
-  <button class="btn" type="submit" style="grid-column: 1 / -1;">Adicionar</button>
-</form>
 
-<div class="card">
-  <h2>Na despensa ({{ items|length }})</h2>
-  {% if items %}
-  <ul class="meal-list">
-    {% for item in items %}
-      <li>
-        <span class="meal-name">{{ item.nome }} {% if item.quantidade %}<span class="tag">{{ item.quantidade }}</span>{% endif %}</span>
-        <form method="post" action="{{ url_for('remover_despensa', page_id=item.page_id) }}">
-          <button class="btn btn-sm btn-danger" type="submit">Remover</button>
-        </form>
-      </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-    <p class="subtitle">Ainda não adicionaste nada.</p>
-  {% endif %}
-</div>
-
-<a href="{{ url_for('sugestao') }}" class="btn btn-secondary">🤖 O que posso comer agora?</a>
 {% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base_organic.html" %}
+
+{% block titulo %}Perfil · NutriApp{% endblock %}
+{% block cabecalho %}O meu perfil{% endblock %}
+{% block subcabecalho %}Objetivo: {{ perfil.objetivo }}{% endblock %}
+
+{% block conteudo %}
+
+  <div class="cols-2">
+    <div class="stack">
+      {# Cada objetivo é um submit: o estado vem sempre do servidor. #}
+      <span class="section-label">Objetivo</span>
+      <form class="choices" method="post" action="{{ url_for('guardar_objetivo') }}" role="group" aria-label="Objetivo" style="flex-wrap:wrap;">
+        {% for chave, label in objetivos %}
+          <button type="submit" name="objetivo" value="{{ chave }}"
+                  aria-pressed="{{ 'true' if chave == objetivo_atual else 'false' }}">{{ label }}</button>
+        {% endfor %}
+      </form>
+
+      <div class="card-lg card-sage">
+        <span class="kicker kicker-sage">Objetivo diário calculado</span>
+        <div class="num" style="font-size:26px;color:var(--s900);margin:3px 0">{{ objetivo.kcal }} kcal</div>
+        <span style="font-size:12px;font-weight:700;color:var(--s900)">
+          {{ objetivo.p }} g proteína · {{ objetivo.c }} g hidratos · {{ objetivo.g }} g gordura
+        </span>
+      </div>
+
+      <span class="section-label accent">Os meus dados</span>
+      <dl class="data-list">
+        {% for d in dados_perfil %}
+          <div><dt>{{ d.label }}</dt><dd>{{ d.valor }}</dd></div>
+        {% endfor %}
+      </dl>
+      <a class="btn btn-secondary btn-block" href="{{ url_for('onboarding') }}">Editar dados pessoais</a>
+    </div>
+
+    <div class="stack">
+      <span class="section-label accent">Lembretes</span>
+      {% for l in lembretes %}
+        <form method="post" action="{{ url_for('alternar_lembrete') }}">
+          <input type="hidden" name="chave" value="{{ l.chave }}">
+          <button class="toggle-row" type="submit" aria-pressed="{{ 'true' if l.ativo else 'false' }}">
+            <span class="grow">
+              <span class="name">{{ l.nome }}</span><br>
+              <span class="muted">{{ l.detalhe }}</span>
+            </span>
+            <span class="switch" aria-hidden="true"></span>
+          </button>
+        </form>
+      {% endfor %}
+
+      <span class="section-label accent" style="margin-top:6px">Alimentos</span>
+      <a class="btn btn-secondary btn-block" href="{{ url_for('gerir_alimentos') }}">Gerir alimentos</a>
+
+      <span class="section-label accent" style="margin-top:6px">Receitas</span>
+      <a class="btn btn-secondary btn-block" href="{{ url_for('receitas') }}">Gerir receitas</a>
+    </div>
+  </div>
+
+{% endblock %}

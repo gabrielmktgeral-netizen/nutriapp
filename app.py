@@ -50,6 +50,25 @@ HABITO_LABEL = {
     "jantar": "Jantar habitual",
 }
 
+# ícones (caminhos SVG) do ecrã "Início" redesenhado
+ICONES_ORGANIC = {
+    "pequeno_almoco": "M12 4v2 M12 18v2 M5 12H3 M21 12h-2 M17.5 6.5 19 5 M5 5l1.5 1.5 "
+                       "M6.5 17.5 5 19 M19 19l-1.5-1.5 M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8",
+    "almoco": "M7 3v18 M4 3v6a3 3 0 0 0 6 0V3 M17 3c2 0 3 1.6 3 4s-1 4-3 4v10",
+    "lanche": "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M9 10h.01 M14.5 9.5h.01 M13 15h.01",
+    "jantar": "M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10Z",
+}
+
+
+def atualizar_perfil(**campos):
+    """Muda só os campos indicados no perfil, sem apagar o resto — lê o
+    perfil atual, junta as alterações, e grava tudo de novo."""
+    atual = db.get_profile() or {}
+    novo = dict(atual)
+    novo.update(campos)
+    db.save_profile(novo)
+    return novo
+
 
 def week_bounds(ref_date):
     monday = ref_date - timedelta(days=ref_date.weekday())
@@ -161,15 +180,149 @@ def index():
         excluidos_nomes = [e["nome"] for e in db.get_excluidos()]
         nota_nutricional = gerar_nota_periodica(targets, meals_recentes, excluidos_nomes)
 
+    # ---------- dados para o novo visual (Início) ----------
+    alimentos_custom_hoje = db.get_custom_foods() if db.configured() else []
+    extra_hoje = mi.dict_custom(alimentos_custom_hoje)
+    peso_unidade_hoje = mi.dict_peso_unidade(alimentos_custom_hoje)
+
+    refeicoes_organic = []
+    for tipo in ["pequeno_almoco", "almoco", "lanche", "jantar"]:
+        meal = meals_by_type[tipo]
+        label = nc.MEAL_LABELS[tipo][1]
+        saltada = bool(meal) and meal.get("texto_original") == "Não comi nada"
+        itens = mi.resumo_itens(meal.get("texto_original"), extra=extra_hoje, peso_unidade=peso_unidade_hoje) if meal and not saltada else None
+        origens = [(t2, f"{nc.MEAL_LABELS[t2][0]} {nc.MEAL_LABELS[t2][1]}") for t2 in refeicoes_duplicaveis]
+        refeicoes_organic.append({
+            "tipo": label, "tipo_slug": tipo, "icone": ICONES_ORGANIC[tipo],
+            "itens": [{"nome": it["nome"], "kcal": round(it["kcal"])} for it in itens] if itens else [],
+            "registada": bool(meal), "saltada": saltada,
+            "kcal": round(meal["kcal"]) if meal else 0,
+            "p": round(meal["proteina_g"]) if meal else 0,
+            "c": round(meal["hidratos_g"]) if meal else 0,
+            "g": round(meal["gordura_g"]) if meal else 0,
+            "editar_href": url_for("editar_refeicao", page_id=meal["page_id"], voltar="index") if meal else "",
+            "registar_href": url_for("registar_refeicao", tipo=tipo),
+            "nao_comi_href": url_for("nao_comi", tipo=tipo),
+            "habitual_href": url_for("registar_habitual", tipo=tipo) if (not meal and habitos.get(tipo)) else None,
+            "duplicar_origens": origens if not meal else None,
+        })
+
+    dia_semana_abbr = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][today.weekday()]
+    mes_abbr = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][today.month - 1]
+
+    dia_organic = {
+        "data_legivel": f"{dia_semana_abbr}, {today.day} {mes_abbr}",
+        "kcal": f"{round(totals['kcal']):,}".replace(",", " "),
+        "pct": min(1.0, (totals["kcal"] / targets["kcal"]) if targets["kcal"] else 0),
+        "refeicoes": refeicoes_organic,
+        "macros": [
+            {"nome": "Proteína", "valor": round(totals["proteina_g"]), "meta": round(targets["protein_g"]),
+             "pct": min(100, round(totals["proteina_g"] / targets["protein_g"] * 100)) if targets["protein_g"] else 0, "classe": ""},
+            {"nome": "Hidratos", "valor": round(totals["hidratos_g"]), "meta": round(targets["carbs_g"]),
+             "pct": min(100, round(totals["hidratos_g"] / targets["carbs_g"] * 100)) if targets["carbs_g"] else 0, "classe": "m-carb"},
+            {"nome": "Gordura", "valor": round(totals["gordura_g"]), "meta": round(targets["fat_g"]),
+             "pct": min(100, round(totals["gordura_g"] / targets["fat_g"] * 100)) if targets["fat_g"] else 0, "classe": "m-fat"},
+        ],
+    }
+
+    peso_kg = profile.get("peso_kg")
+    peso_organic = {
+        "atual": (f"{peso_kg:.1f}".replace(".", ",") + " kg") if peso_kg else "—",
+        "pontos": "", "ultimo": None, "variacao": "Atualiza no teu Perfil",
+    }
+
+    semana_organic = [
+        {"dia": s["label"][:3], "pct": max(5, min(100, round(s["kcal"] / targets["kcal"] * 100))) if targets["kcal"] else 5,
+         "hoje": s["is_today"], "href": url_for("dia", data_iso=s["date"])}
+        for s in week_summary
+    ]
+
+    plano_treino = plano_diario(profile.get("objetivo"), totals, targets, weekday=today.weekday())
+    treino_organic = {"nome": plano_treino["workout"]["titulo"], "detalhe": plano_treino["mensagem"]}
+
+    tipo_proxima = next((t for t in ["pequeno_almoco", "almoco", "lanche", "jantar"] if not meals_by_type[t]), "almoco")
+    proxima_refeicao_href = url_for("registar_refeicao", tipo=tipo_proxima)
+
     return render_template(
-        "index.html", profile=profile, totals=totals, targets=targets,
+        "inicio.html", profile=profile, totals=totals, targets=targets,
         meals_by_type=meals_by_type, meal_labels=nc.MEAL_LABELS,
         week_summary=week_summary, today=today_iso, habitos=habitos,
         restante_kcal=restante_kcal, restante_prot=restante_prot,
         goal_label=nc.GOAL_LABELS.get(profile.get("objetivo"), ""),
         nota_nutricional=nota_nutricional,
         refeicoes_duplicaveis=refeicoes_duplicaveis,
+        ecra="inicio", notificacoes_novas=False,
+        perfil={"objetivo": nc.GOAL_LABELS.get(profile.get("objetivo"), "")},
+        objetivo={"kcal": round(targets["kcal"]), "p": round(targets["protein_g"]),
+                  "c": round(targets["carbs_g"]), "g": round(targets["fat_g"])},
+        dia=dia_organic, peso=peso_organic, semana=semana_organic,
+        treino=treino_organic, proxima_refeicao_href=proxima_refeicao_href,
+        abrir=request.args.get("abrir"),
     )
+
+
+LEMBRETE_TIPOS = [
+    ("pequeno_almoco", "Lembrar pequeno-almoço"),
+    ("almoco", "Lembrar almoço"),
+    ("lanche", "Lembrar lanche"),
+    ("jantar", "Lembrar jantar"),
+]
+
+
+@app.route("/perfil")
+def perfil():
+    profile = db.get_profile() if db.configured() else None
+    if not profile or not profile.get("idade"):
+        return redirect(url_for("onboarding"))
+
+    targets = nc.macro_targets(profile) or {"kcal": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}
+    objetivo_atual = profile.get("objetivo")
+
+    dados_perfil = [
+        {"label": "Sexo", "valor": "Masculino" if profile.get("sexo") == "M" else "Feminino"},
+        {"label": "Idade", "valor": f"{profile.get('idade')} anos"},
+        {"label": "Altura", "valor": f"{profile.get('altura_cm')} cm"},
+        {"label": "Peso atual", "valor": f"{profile.get('peso_kg')} kg"},
+        {"label": "Atividade", "valor": nc.ACTIVITY_LABELS.get(profile.get("nivel_atividade"), "")},
+    ]
+
+    lembretes = []
+    for chave, nome in LEMBRETE_TIPOS:
+        hora_campo = {"pequeno_almoco": "hora_pequeno_almoco", "almoco": "hora_almoco",
+                      "lanche": "hora_lanche", "jantar": "hora_jantar"}[chave]
+        lembretes.append({
+            "chave": chave, "nome": nome,
+            "detalhe": f"Por volta das {profile.get(hora_campo, '')}",
+            "ativo": not profile.get(f"pular_lembrete_{chave}"),
+        })
+
+    return render_template(
+        "perfil.html", ecra="perfil", notificacoes_novas=False,
+        objetivo={"kcal": round(targets["kcal"]), "p": round(targets["protein_g"]),
+                  "c": round(targets["carbs_g"]), "g": round(targets["fat_g"])},
+        objetivos=list(nc.GOAL_LABELS.items()), objetivo_atual=objetivo_atual,
+        perfil={"objetivo": nc.GOAL_LABELS.get(objetivo_atual, "")},
+        dados_perfil=dados_perfil, lembretes=lembretes,
+    )
+
+
+@app.route("/perfil/objetivo", methods=["POST"])
+def guardar_objetivo():
+    objetivo = request.form.get("objetivo", "")
+    if objetivo in nc.GOAL_LABELS:
+        atualizar_perfil(objetivo=objetivo)
+        flash("Objetivo atualizado! As tuas metas diárias já foram recalculadas.", "success")
+    return redirect(url_for("perfil"))
+
+
+@app.route("/perfil/lembrete", methods=["POST"])
+def alternar_lembrete():
+    chave = request.form.get("chave", "")
+    if chave in HABITO_CAMPO:
+        profile = db.get_profile() or {}
+        campo = f"pular_lembrete_{chave}"
+        atualizar_perfil(**{campo: not profile.get(campo)})
+    return redirect(url_for("perfil"))
 
 
 @app.route("/onboarding", methods=["GET", "POST"])
@@ -730,13 +883,24 @@ def despensa():
         return redirect(url_for("despensa"))
 
     items = db.get_pantry() if db.configured() else []
-    return render_template("despensa.html", items=items)
+    excluidos = db.get_excluidos() if db.configured() else []
+    return render_template("despensa.html", ecra="sugestoes", notificacoes_novas=False,
+                            alimentos=items, excluidos=excluidos)
 
 
 @app.route("/despensa/remover/<page_id>", methods=["POST"])
 def remover_despensa(page_id):
     db.delete_pantry_item(page_id)
     flash("Item removido.", "success")
+    return redirect(url_for("despensa"))
+
+
+@app.route("/despensa/excluir", methods=["POST"])
+def adicionar_excluido():
+    nome = request.form.get("nome", "").strip()
+    if nome:
+        db.add_excluido(nome)
+        flash(f"'{nome}' não vai voltar a ser sugerido.", "success")
     return redirect(url_for("despensa"))
 
 
@@ -786,16 +950,65 @@ def sugestao():
         pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=excluidos_nomes, top_n=6,
         receitas_extra=minhas_receitas)
 
-    return render_template("sugestao.html", restante_kcal=restante_kcal, restante_prot=restante_prot,
-                            receitas_prontas=receitas_prontas, receitas_quase=receitas_quase,
-                            pantry=pantry, excluidos=excluidos)
+    prontas = [{
+        "id": it["receita"]["nome"], "nome": it["receita"]["nome"], "kcal": round(it["receita"]["kcal"]),
+        "p": round(it["receita"]["proteina_g"]), "c": round(it["receita"]["hidratos_g"]), "g": round(it["receita"]["gordura_g"]),
+    } for it in receitas_prontas]
+    quase_la = [{
+        "id": it["receita"]["nome"], "nome": it["receita"]["nome"], "kcal": round(it["receita"]["kcal"]),
+        "p": round(it["receita"]["proteina_g"]), "c": round(it["receita"]["hidratos_g"]), "g": round(it["receita"]["gordura_g"]),
+        "falta": it["faltam"][0] if it["faltam"] else "",
+    } for it in receitas_quase]
+
+    return render_template(
+        "sugestao.html", ecra="sugestoes", notificacoes_novas=False,
+        disponivel={"kcal": f"{max(restante_kcal, 0):,}".replace(",", " "), "proteina": max(restante_prot, 0)},
+        prontas=prontas, quase_la=quase_la, despensa_total=len(pantry),
+    )
+
+
+@app.route("/sugestao/registar", methods=["POST"])
+def registar_receita():
+    nome_receita = request.form.get("receita_id", "").strip()
+    if not nome_receita:
+        flash("Escolhe uma receita.", "error")
+        return redirect(url_for("sugestao"))
+
+    minhas_receitas = db.get_custom_recipes() if db.configured() else []
+    receita = find_recipe_by_name(nome_receita, receitas_extra=minhas_receitas)
+    if not receita:
+        flash("Não encontrei essa receita.", "error")
+        return redirect(url_for("sugestao"))
+
+    meals_today = db.get_meals_for_day(date.today().isoformat()) if db.configured() else []
+    registados = {m["tipo"] for m in meals_today}
+    tipo = next((t for t in ["pequeno_almoco", "almoco", "lanche", "jantar"] if t not in registados), "almoco")
+
+    db.add_meal(date.today().isoformat(), tipo, receita["nome"],
+                receita["kcal"], receita["proteina_g"], receita["hidratos_g"], receita["gordura_g"])
+    flash(f"'{receita['nome']}' registada no(a) {nc.MEAL_LABELS[tipo][1]}! ✅", "success")
+    return redirect(url_for("index"))
+
+
+@app.route("/sugestao/lista-compras", methods=["POST"])
+def lista_compras():
+    nome_receita = request.form.get("receita_id", "").strip()
+    minhas_receitas = db.get_custom_recipes() if db.configured() else []
+    receita = find_recipe_by_name(nome_receita, receitas_extra=minhas_receitas)
+    if receita:
+        pantry_nomes = {p["nome"].strip().lower() for p in db.get_pantry()}
+        for chave in receita.get("chave_despensa", []):
+            if chave.strip().lower() not in pantry_nomes:
+                db.add_pantry_item(chave, "por comprar")
+        flash("Adicionado à despensa como 'por comprar'.", "success")
+    return redirect(url_for("sugestao"))
 
 
 @app.route("/sugestao/excluidos/remover/<page_id>", methods=["POST"])
 def remover_excluido(page_id):
     db.delete_excluido(page_id)
     flash("Removido da lista de excluídos.", "success")
-    return redirect(url_for("sugestao"))
+    return redirect(url_for("despensa"))
 
 
 @app.route("/exercicio", methods=["GET", "POST"])
@@ -862,8 +1075,47 @@ def exercicio():
         }
         plano = plano_diario(objetivo, totals, targets, weekday=today.weekday())
 
-    return render_template("exercicio.html", week_ex=week_ex, goal_label=goal_label, modo=modo, plano=plano,
-                            today_weekday=today.weekday(), active_exercise=active_exercise)
+    dias_label = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+    data_legivel = f"{dias_label[today.weekday()]}, {today.day} {['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][today.month-1]}"
+
+    if modo == "semanal":
+        treino_organic = {"nome": "Plano da semana", "motivo": plano["mensagem"]}
+        exercicios_organic = []
+        plano_semanal_organic = [
+            {"dia": dias_label[i], "foco": foco, "duracao": "—" if foco == "Descanso" else "20-45 min"}
+            for i, foco in enumerate(plano["estrutura"])
+        ]
+    else:
+        treino_organic = {"nome": plano["workout"]["titulo"], "motivo": plano["mensagem"]}
+        exercicios_organic = plano["workout"]["exercicios"]
+        plano_semanal_organic = []
+
+    minutos_por_dia = [0] * 7
+    for e in week_ex:
+        try:
+            d_idx = date.fromisoformat(e["data"]).weekday()
+            minutos_por_dia[d_idx] += e.get("duracao_min") or 0
+        except (ValueError, KeyError):
+            pass
+    semana_organic = [
+        {"dia": dias_label[i], "minutos": minutos_por_dia[i],
+         "pct": max(6, round(min(1, minutos_por_dia[i] / 60) * 100)), "hoje": i == today.weekday()}
+        for i in range(7)
+    ]
+    total_min = sum(minutos_por_dia)
+    dias_com_treino = sum(1 for m in minutos_por_dia if m)
+    resumo_semana = [
+        {"label": "Tempo total", "valor": f"{total_min} min"},
+        {"label": "Treinos feitos", "valor": f"{len(week_ex)}"},
+        {"label": "Média por treino", "valor": f"{round(total_min / len(week_ex))} min" if week_ex else "—"},
+    ]
+
+    return render_template(
+        "exercicio.html", ecra="exercicio", notificacoes_novas=False,
+        data_legivel=data_legivel, modo=modo, treino=treino_organic, exercicios=exercicios_organic,
+        plano_semanal=plano_semanal_organic, semana=semana_organic, resumo_semana=resumo_semana,
+        week_ex=week_ex, active_exercise=active_exercise,
+    )
 
 
 @app.route("/exercicio/iniciar", methods=["POST"])
