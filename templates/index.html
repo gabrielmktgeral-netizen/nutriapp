@@ -79,6 +79,17 @@
               <button type="submit" class="btn btn-sm" style="margin-left:6px;">⚡ Habitual</button>
             </form>
           {% endif %}
+          {% if refeicoes_duplicaveis %}
+            <form method="post" action="{{ url_for('duplicar_refeicao') }}" style="display:inline-flex; gap:4px; align-items:center; margin-left:6px;">
+              <input type="hidden" name="tipo_destino" value="{{ tipo }}">
+              <select name="tipo_origem" style="font-size:0.8rem; padding:2px 4px; border-radius:6px;">
+                {% for t2 in refeicoes_duplicaveis %}
+                  <option value="{{ t2 }}">{{ meal_labels[t2][0] }} {{ meal_labels[t2][1] }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-sm btn-secondary">📋 Duplicar</button>
+            </form>
+          {% endif %}
           <form method="post" action="{{ url_for('nao_comi', tipo=tipo) }}" style="display:inline;">
             <button type="submit" class="btn btn-sm btn-secondary" style="margin-left:6px;">Não comi</button>
           </form>

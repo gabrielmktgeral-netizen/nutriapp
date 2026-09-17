@@ -145,6 +145,7 @@ def index():
     restante_prot = max(round(targets["protein_g"] - totals["proteina_g"]), 0)
 
     habitos = {tipo: (profile.get(campo) or "").strip() for tipo, campo in HABITO_CAMPO.items()}
+    refeicoes_duplicaveis = [t for t, m in meals_by_type.items() if m and m.get("texto_original") != "Não comi nada"]
 
     # De 3 em 3 dias mostramos uma nota nutricional (sem precisar de guardar
     # estado — o dia do ano garante que só aparece 1 em cada 3 dias).
@@ -167,6 +168,7 @@ def index():
         restante_kcal=restante_kcal, restante_prot=restante_prot,
         goal_label=nc.GOAL_LABELS.get(profile.get("objetivo"), ""),
         nota_nutricional=nota_nutricional,
+        refeicoes_duplicaveis=refeicoes_duplicaveis,
     )
 
 
@@ -684,13 +686,37 @@ def dia(data_iso):
     today_iso = date.today().isoformat()
     anterior = (dia_ref - timedelta(days=1)).isoformat()
     seguinte = (dia_ref + timedelta(days=1)).isoformat()
+    refeicoes_duplicaveis = [t for t, m in meals_by_type.items() if m and m.get("texto_original") != "Não comi nada"]
 
     return render_template(
         "dia.html", data_iso=data_iso, dia_ref=dia_ref, meals_by_type=meals_by_type,
         meal_labels=nc.MEAL_LABELS, totals=totals, targets=targets,
         is_today=(data_iso == today_iso), anterior=anterior, seguinte=seguinte,
-        dias_semana=DIAS_SEMANA,
+        dias_semana=DIAS_SEMANA, refeicoes_duplicaveis=refeicoes_duplicaveis,
     )
+
+
+@app.route("/refeicao/duplicar", methods=["POST"])
+def duplicar_refeicao():
+    data_iso = request.form.get("data") or date.today().isoformat()
+    tipo_destino = request.form.get("tipo_destino")
+    tipo_origem = request.form.get("tipo_origem")
+    meals = db.get_meals_for_day(data_iso)
+    origem = next((m for m in meals if m["tipo"] == tipo_origem), None)
+    ja_existe = any(m["tipo"] == tipo_destino for m in meals)
+
+    if not origem:
+        flash("Não encontrei essa refeição para duplicar.", "error")
+    elif ja_existe:
+        flash("Já tens essa refeição registada — edita-a se quiseres mudar.", "error")
+    else:
+        db.add_meal(data_iso, tipo_destino, origem["texto_original"],
+                    origem["kcal"], origem["proteina_g"], origem["hidratos_g"], origem["gordura_g"])
+        flash("Refeição duplicada! 📋", "success")
+
+    if data_iso == date.today().isoformat():
+        return redirect(url_for("index"))
+    return redirect(url_for("dia", data_iso=data_iso))
 
 
 @app.route("/despensa", methods=["GET", "POST"])
