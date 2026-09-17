@@ -1,58 +1,59 @@
-{% extends "base.html" %}
-{% block title %}Gerir alimentos{% endblock %}
-{% block content %}
-<h1>🥕 Gerir alimentos</h1>
-<p class="subtitle">Todos os alimentos que a app conhece. Podes corrigir os valores de qualquer um.</p>
+{% extends "base_organic.html" %}
 
-<div class="card">
-  <ul class="item-list">
-    {% for a in alimentos %}
-      <li style="flex-direction:column; align-items:stretch;">
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-          <span>
-            {{ a.nome }}
-            {% if a.personalizado %}<span class="tag">personalizado</span>{% endif %}
-          </span>
-          <button type="button" class="btn btn-sm btn-outline"
-                  onclick="document.getElementById('editar-{{ loop.index }}').classList.toggle('hidden-form')">
-            Editar
-          </button>
+{% block titulo %}Gerir alimentos · NutriApp{% endblock %}
+{% block cabecalho %}🥕 Gerir alimentos{% endblock %}
+{% block subcabecalho %}{{ alimentos | length }} alimentos conhecidos{% endblock %}
+
+{% block conteudo %}
+
+<div class="stack">
+  {% for a in alimentos %}
+    <div class="card-lg">
+      <div class="row">
+        <span class="grow" style="font-size:14px;font-weight:700;">
+          {{ a.nome }}
+          {% if a.personalizado %}<span class="tag">personalizado</span>{% endif %}
+        </span>
+        <button type="button" class="btn btn-secondary btn-sm"
+                onclick="document.getElementById('editar-{{ loop.index }}').classList.toggle('hidden-form')">
+          Editar
+        </button>
+      </div>
+
+      <form method="post" action="{{ url_for('guardar_alimento') }}" id="editar-{{ loop.index }}" class="hidden-form stack" style="margin-top:12px;">
+        <input type="hidden" name="page_id" value="{{ a.page_id or '' }}">
+        <div class="field">
+          <label>Nome</label>
+          <input type="text" name="nome" value="{{ a.nome }}" required>
         </div>
+        <div class="row">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="preencherAutomatico(this)">🔍 Preencher automaticamente</button>
+          <span class="preencher-estado"></span>
+        </div>
+        <p class="subtitle" style="margin:6px 0 0;">Valores por 100g:</p>
+        <div class="macro-grid">
+          <div class="field"><label>🔥 Kcal</label><input type="number" name="kcal" step="0.1" min="0" value="{{ a.kcal }}" required></div>
+          <div class="field"><label>🥩 Proteína (g)</label><input type="number" name="proteina" step="0.1" min="0" value="{{ a.proteina_g }}" required></div>
+          <div class="field"><label>🍚 Hidratos (g)</label><input type="number" name="hidratos" step="0.1" min="0" value="{{ a.hidratos_g }}" required></div>
+          <div class="field"><label>🥑 Gordura (g)</label><input type="number" name="gordura" step="0.1" min="0" value="{{ a.gordura_g }}" required></div>
+        </div>
+        <div class="field">
+          <label>⚖️ Peso de 1 unidade (g) — opcional</label>
+          <input type="number" name="peso_unidade" step="1" min="0" value="{{ a.peso_unidade_g or '' }}" placeholder="ex: 1 bolacha = 11g">
+          <p class="subtitle" style="margin-top:4px;">
+            Só precisas disto se registas por "unidade" (ex: 1 bolacha). Sem isto, assume 100g por unidade.
+          </p>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Guardar</button>
+      </form>
 
-        <form method="post" action="{{ url_for('guardar_alimento') }}" id="editar-{{ loop.index }}" class="hidden-form" style="margin-top:10px; width:100%;">
-          <input type="hidden" name="page_id" value="{{ a.page_id or '' }}">
-          <div class="field">
-            <label>Nome</label>
-            <input type="text" name="nome" value="{{ a.nome }}" required>
-          </div>
-          <button type="button" class="btn btn-sm btn-outline" onclick="preencherAutomatico(this)">🔍 Preencher automaticamente</button>
-          <span class="preencher-estado" style="font-size:0.8rem; margin-left:8px;"></span>
-          <p class="subtitle" style="font-size:0.85rem; margin-top:10px;">Valores por 100g:</p>
-          <div class="macro-grid">
-            <div class="field"><label>🔥 Kcal</label><input type="number" name="kcal" step="0.1" min="0" value="{{ a.kcal }}" required></div>
-            <div class="field"><label>🥩 Proteína (g)</label><input type="number" name="proteina" step="0.1" min="0" value="{{ a.proteina_g }}" required></div>
-            <div class="field"><label>🍚 Hidratos (g)</label><input type="number" name="hidratos" step="0.1" min="0" value="{{ a.hidratos_g }}" required></div>
-            <div class="field"><label>🥑 Gordura (g)</label><input type="number" name="gordura" step="0.1" min="0" value="{{ a.gordura_g }}" required></div>
-          </div>
-          <div class="field" style="margin-top:8px;">
-            <label>⚖️ Peso de 1 unidade (g) — opcional</label>
-            <input type="number" name="peso_unidade" step="1" min="0" value="{{ a.peso_unidade_g or '' }}" placeholder="ex: 1 bolacha = 11g">
-            <p class="subtitle" style="font-size:0.78rem; margin-top:4px;">
-              Só precisas disto se registas por "unidade" (ex: 1 bolacha). Sem isto, assume 100g por unidade.
-            </p>
-          </div>
-          <button class="btn btn-sm" type="submit" style="margin-top:8px;">Guardar</button>
-        </form>
-
-        {% if a.personalizado %}
-        <form method="post" action="{{ url_for('remover_personalizacao_alimento', page_id=a.page_id) }}" style="margin-top:6px;">
-          <button type="submit" class="btn btn-sm btn-secondary">↺ Repor valores originais / remover</button>
-        </form>
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
+      {% if a.personalizado %}
+      <form method="post" action="{{ url_for('remover_personalizacao_alimento', page_id=a.page_id) }}" style="margin-top:8px;">
+        <button type="submit" class="btn btn-secondary btn-block btn-sm">↺ Repor valores originais / remover</button>
+      </form>
+      {% endif %}
+    </div>
+  {% endfor %}
 </div>
 
-<style>.hidden-form { display:none; }</style>
 {% endblock %}

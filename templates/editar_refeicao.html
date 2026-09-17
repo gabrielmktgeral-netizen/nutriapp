@@ -1,28 +1,30 @@
-{% extends "base.html" %}
+{% extends "base_organic.html" %}
 {% from "_item_row_macro.html" import item_row with context %}
-{% block title %}Editar refeição{% endblock %}
-{% block content %}
-<h1>✏️ Editar refeição</h1>
-<p class="subtitle">{{ meal_labels[meal.tipo][0] }} {{ meal_labels[meal.tipo][1] }} — {{ meal.data }}</p>
+
+{% block titulo %}Editar refeição · NutriApp{% endblock %}
+{% block cabecalho %}Editar refeição{% endblock %}
+{% block subcabecalho %}{{ meal_labels[meal.tipo][0] }} {{ meal_labels[meal.tipo][1] }} — {{ meal.data }}{% endblock %}
+
+{% block conteudo %}
 
 {% include "_datalist_alimentos.html" %}
 
-<div class="card">
-  <h2>Valores atuais</h2>
-  <div class="macro-grid">
+<div class="card-lg">
+  <span class="section-label">Valores atuais</span>
+  <div class="macro-grid" style="margin-top:8px;">
     <div class="macro-box"><div class="value">🔥 {{ meal.kcal|round|int }}</div><div class="label">kcal</div></div>
     <div class="macro-box"><div class="value">🥩 {{ meal.proteina_g|round|int }}g</div><div class="label">proteína</div></div>
     <div class="macro-box"><div class="value">🍚 {{ meal.hidratos_g|round|int }}g</div><div class="label">hidratos</div></div>
     <div class="macro-box"><div class="value">🥑 {{ meal.gordura_g|round|int }}g</div><div class="label">gordura</div></div>
   </div>
   {% if not itens_atuais %}
-    <p class="subtitle" style="font-size:0.85rem;">⚠️ Esta refeição foi registada no formato antigo — escolhe os alimentos abaixo para a atualizar.</p>
+    <p class="subtitle">⚠️ Esta refeição foi registada no formato antigo — escolhe os alimentos abaixo para a atualizar.</p>
   {% else %}
-    <p class="subtitle" style="font-size:0.85rem;">Podes mudar os alimentos e quantidades abaixo.</p>
+    <p class="subtitle">Podes mudar os alimentos e quantidades abaixo.</p>
   {% endif %}
 </div>
 
-<form method="post" class="card">
+<form method="post" class="card-lg stack">
   <input type="hidden" name="voltar" value="{{ voltar }}">
   <div class="field">
     <label>O que comeste?</label>
@@ -35,44 +37,21 @@
         {{ item_row() }}
       {% endif %}
     </div>
-    <button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="novaLinha()">+ Adicionar alimento</button>
+    <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px;align-self:flex-start;" onclick="novaLinha()">+ Adicionar alimento</button>
   </div>
-  <button class="btn" type="submit" style="margin-top:14px;">Guardar alterações</button>
+  <button class="btn btn-primary btn-block" type="submit">Guardar alterações</button>
 </form>
 
 {% include "_criar_alimento.html" %}
 
 <form method="post" action="{{ url_for('remover_refeicao', page_id=meal.page_id) }}">
   <input type="hidden" name="voltar" value="{{ voltar }}">
-  <button type="submit" class="btn btn-danger">🗑️ Remover esta refeição</button>
+  <button type="submit" class="btn btn-danger btn-block">🗑️ Remover esta refeição</button>
 </form>
 
-<style>
-  .item-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
-  .item-row input[name="chave"] { flex:2 1 160px; }
-  .item-row input[name="quantidade"] { flex:0 0 70px; }
-  .item-row select[name="unidade"] { flex:1 1 130px; }
-  .item-row .btn-remove {
-    flex:0 0 auto; border:none; background:transparent; color:var(--red);
-    font-size:1.1rem; cursor:pointer; padding:4px 8px;
-  }
-  .info-icon {
-    position:relative; flex:0 0 auto; cursor:pointer; color:var(--green-dark);
-    font-size:1.05rem; padding:2px 4px;
-  }
-  .info-icon .tooltip {
-    display:none; position:absolute; bottom:135%; left:50%; transform:translateX(-50%);
-    background:var(--text); color:#fff; padding:8px 10px; border-radius:8px;
-    font-size:0.8rem; line-height:1.5; white-space:nowrap; z-index:5;
-    box-shadow:var(--shadow-hover);
-  }
-  /* rato: mostra ao passar por cima */
-  @media (hover: hover) {
-    .info-icon:hover .tooltip { display:block; }
-  }
-  /* toque: mostra ao clicar (classe adicionada por JS) */
-  .info-icon.aberto .tooltip { display:block; }
-</style>
+{% endblock %}
+
+{% block scripts %}
 <script>
   function novaLinha() {
     var cont = document.getElementById('itens-refeicao');
@@ -102,7 +81,6 @@
   atualizarBotoesRemover();
 
   // Toque no telemóvel: clicar no ⓘ abre/fecha o balão de informação.
-  // No rato, o CSS já trata disto ao passar por cima (não precisa de clicar).
   document.addEventListener('click', function (e) {
     var icon = e.target.closest ? e.target.closest('.info-icon') : null;
     document.querySelectorAll('.info-icon.aberto').forEach(function (el) {

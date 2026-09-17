@@ -70,7 +70,9 @@ button { font-family: var(--f-body); }
   min-height: 100dvh;
   display: grid;
   grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
 }
+.app > * { min-width: 0; }
 
 .screen { display: none; }
 .screen.is-active { display: flex; flex-direction: column; gap: 14px; }
@@ -126,7 +128,10 @@ button { font-family: var(--f-body); }
   background: var(--bg);
   border-top: 1px solid var(--divider);
   position: sticky;
+  left: 0;
+  right: 0;
   bottom: 0;
+  width: 100%;
 }
 
 .nav a, .nav button {
@@ -174,6 +179,8 @@ button { font-family: var(--f-body); }
 .btn-sm { font-size: 12px; padding: 8px 14px; min-height: 44px; }
 .btn-icon { width: 44px; height: 44px; padding: 0; }
 .btn-fab { font-size: 16px; padding: 14px; box-shadow: var(--sh-md); }
+.btn-danger { background: transparent; color: var(--a800); border-color: var(--a300); }
+.btn-danger:hover { background: var(--a200); }
 
 /* ===== Cartões ===== */
 .card { background: var(--surface); border-radius: var(--r-md); padding: 12px 14px; }
@@ -705,3 +712,89 @@ button { font-family: var(--f-body); }
 /* Pares label/valor quando sao <span> em vez de <dt>/<dd> */
 .data-list .lbl { font-size: 13px; font-weight: 700; color: var(--n800); }
 .data-list .val { font-size: 14px; font-weight: 700; text-align: right; }
+
+/* ===== Formularios "clássicos" (perfil, registar refeição, alimentos, receitas) =====
+   Usam o mesmo sistema de cores/tipografia do resto da app, com campo + label
+   em vez do input-pill (feito para formulários compridos, com vários campos). */
+.subtitle { font-size: 13px; color: var(--n700); margin: 4px 0 14px; line-height: 1.4; }
+
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.field label { font-size: 12px; font-weight: 700; color: var(--n800); }
+.field input[type="text"], .field input[type="number"], .field input[type="time"],
+.field input[type="date"], .field input[type="search"], .field select, .field textarea {
+  width: 100%;
+  font-family: var(--f-body);
+  font-size: 15px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--divider);
+  background: var(--surface);
+  color: var(--text);
+}
+.field textarea { resize: vertical; min-height: 70px; }
+.field-row { display: flex; align-items: center; flex-direction: row; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.field-row > span { min-width: 0; }
+.field-check { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-bottom: 10px; }
+.field-check input { width: auto; }
+.field-check label { font-size: 13px; font-weight: 600; color: var(--text); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 480px) { .two-col { grid-template-columns: 1fr; } }
+
+.tag {
+  display: inline-flex; font-size: 10px; font-weight: 700;
+  background: var(--bg); color: var(--n700);
+  border-radius: 999px; padding: 2px 8px; margin-left: 6px;
+}
+
+.item-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.item-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 13px; padding: 9px 0; border-bottom: 1px solid var(--divider);
+}
+.item-list li:last-child { border-bottom: none; }
+
+.stat-grid, .macro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-box, .macro-box { background: var(--bg); border-radius: var(--r-md); padding: 12px; text-align: center; }
+.stat-box .value, .macro-box .value { font-family: var(--f-head); font-size: 20px; }
+.stat-box .label, .macro-box .label { font-size: 11px; color: var(--n700); margin-top: 2px; }
+.macro-box .progress-bar { height: 6px; border-radius: 999px; background: var(--divider); overflow: hidden; margin-top: 6px; }
+.macro-box .progress-bar > div { height: 100%; background: var(--s600); border-radius: 999px; }
+.hidden-form { display: none; }
+
+/* Mensagens flash (sucesso/erro) — não apareciam nos ecrãs novos */
+.flash {
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.flash-success { background: var(--s100); color: var(--s800); }
+.flash-error { background: var(--a200); color: var(--a800); }
+
+.preencher-opcoes { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.preencher-estado { font-size: 12px; color: var(--n700); margin-top: 6px; display: block; }
+
+/* Linhas de "o que comeste" (registar/editar refeição, refeição habitual) */
+.item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.item-row input[name="chave"] { flex: 2 1 160px; }
+.item-row input[name="quantidade"] { flex: 0 0 70px; }
+.item-row select[name="unidade"] { flex: 1 1 130px; }
+.item-row input, .item-row select {
+  font-family: var(--f-body); font-size: 14px; padding: 10px 12px;
+  border-radius: var(--r-md); border: 1px solid var(--divider);
+  background: var(--surface); color: var(--text);
+  min-width: 0; max-width: 100%;
+}
+.item-row .btn-remove {
+  flex: 0 0 auto; border: none; background: transparent; color: var(--a700);
+  font-size: 1.1rem; cursor: pointer; padding: 4px 8px;
+}
+.info-icon { position: relative; cursor: help; color: var(--n700); font-size: 13px; }
+.info-icon .tooltip {
+  display: none; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+  background: var(--s900); color: #fff; font-size: 11px; line-height: 1.5;
+  padding: 8px 10px; border-radius: var(--r-sm); white-space: nowrap; z-index: 5;
+}
+.info-icon:hover .tooltip, .info-icon:focus .tooltip, .info-icon.aberto .tooltip { display: block; }

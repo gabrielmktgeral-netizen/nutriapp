@@ -24,6 +24,13 @@
 
   <main class="main">
     <section class="screen is-active">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
       {% block conteudo %}{% endblock %}
     </section>
   </main>
@@ -50,6 +57,66 @@
 {% block folha %}{% endblock %}
 
 <script src="{{ url_for('static', filename='js/nutriapp.js') }}"></script>
+<script>
+  // Botão "Preencher automaticamente" (criar/editar alimento): procura o
+  // nome na Open Food Facts e preenche kcal/proteína/hidratos/gordura do
+  // formulário mais próximo. Usado em várias páginas, por isso vive aqui.
+  function preencherComOpcao(form, opcao, estado) {
+    form.querySelector('input[name="kcal"]').value = opcao.kcal;
+    form.querySelector('input[name="proteina"]').value = opcao.proteina_g;
+    form.querySelector('input[name="hidratos"]').value = opcao.hidratos_g;
+    form.querySelector('input[name="gordura"]').value = opcao.gordura_g;
+    if (estado) estado.textContent = '✅ Preenchido com "' + opcao.nome_produto + '". Confirma se está certo.';
+    var lista = form.querySelector('.preencher-opcoes');
+    if (lista) lista.remove();
+  }
+
+  function preencherAutomatico(btn) {
+    var form = btn.closest('form');
+    var nomeInput = form.querySelector('input[name="nome"]');
+    var estado = form.querySelector('.preencher-estado');
+    var antigaLista = form.querySelector('.preencher-opcoes');
+    if (antigaLista) antigaLista.remove();
+    var nome = (nomeInput.value || '').trim();
+    if (!nome) {
+      if (estado) estado.textContent = '⚠️ Escreve o nome primeiro.';
+      return;
+    }
+    if (estado) estado.textContent = '🔍 A procurar…';
+    fetch('/alimentos/pesquisar?nome=' + encodeURIComponent(nome))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.encontrado || !data.opcoes || !data.opcoes.length) {
+          if (estado) estado.textContent = '❌ Não encontrei — preenche à mão.';
+          return;
+        }
+        if (estado) estado.textContent = '👇 Escolhe o produto certo (ou preenche à mão se nenhum for):';
+        var lista = document.createElement('div');
+        lista.className = 'preencher-opcoes';
+        data.opcoes.forEach(function (opcao) {
+          var op = document.createElement('button');
+          op.type = 'button';
+          op.className = 'btn btn-secondary btn-sm';
+          op.style.justifyContent = 'flex-start';
+          op.style.textAlign = 'left';
+          op.textContent = opcao.nome_produto + ' — ' + opcao.kcal + ' kcal / 100g';
+          op.onclick = function () { preencherComOpcao(form, opcao, estado); };
+          lista.appendChild(op);
+        });
+        estado.parentNode.insertBefore(lista, estado.nextSibling);
+      })
+      .catch(function () {
+        if (estado) estado.textContent = '❌ Falhou — preenche à mão.';
+      });
+  }
+</script>
 {% block scripts %}{% endblock %}
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(function (e) {
+      console.warn("Falha ao registar service worker:", e);
+    });
+  }
+</script>
 </body>
 </html>

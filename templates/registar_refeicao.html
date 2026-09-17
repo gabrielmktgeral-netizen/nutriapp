@@ -1,13 +1,15 @@
-{% extends "base.html" %}
+{% extends "base_organic.html" %}
 {% from "_item_row_macro.html" import item_row with context %}
-{% block title %}Registar refeição{% endblock %}
-{% block content %}
-<h1>🍽️ Registar refeição</h1>
-<p class="subtitle">Escreve o alimento (aparecem sugestões), a quantidade e a unidade. Ex: 1 dose de arroz, meia lata de atum.</p>
+
+{% block titulo %}Registar refeição · NutriApp{% endblock %}
+{% block cabecalho %}Registar refeição{% endblock %}
+{% block subcabecalho %}Escreve o alimento, a quantidade e a unidade{% endblock %}
+
+{% block conteudo %}
 
 {% include "_datalist_alimentos.html" %}
 
-<form method="post" class="card">
+<form method="post" class="card-lg stack">
   <div class="field">
     <label>Refeição</label>
     <select name="tipo">
@@ -22,20 +24,20 @@
     <div id="itens-refeicao">
       {{ item_row() }}
     </div>
-    <button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="novaLinha()">+ Adicionar alimento</button>
+    <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px;align-self:flex-start;" onclick="novaLinha()">+ Adicionar alimento</button>
   </div>
 
-  <button class="btn" type="submit" style="margin-top:14px;">Calcular e guardar</button>
+  <button class="btn btn-primary btn-block" type="submit">Calcular e guardar</button>
 </form>
 
 {% include "_criar_alimento.html" %}
 
 <form method="post" action="{{ url_for('nao_comi', tipo=tipo_padrao) }}">
-  <button type="submit" class="btn btn-secondary">Não comi nada nesta refeição</button>
+  <button type="submit" class="btn btn-secondary btn-block">Não comi nada nesta refeição</button>
 </form>
 
 {% if receitas_sugeridas %}
-<form method="post" action="{{ url_for('registar_refeicao_receita') }}" class="card" style="margin-top:14px;">
+<form method="post" action="{{ url_for('registar_refeicao_receita') }}" class="card-lg stack" style="margin-top:14px;">
   <div class="field">
     <label>Ou escolhe uma receita sugerida</label>
     <select name="nome_receita">
@@ -45,21 +47,21 @@
     </select>
   </div>
   <input type="hidden" name="tipo" value="{{ tipo_padrao }}">
-  <button type="submit" class="btn btn-outline">Registar esta receita</button>
+  <button type="submit" class="btn btn-secondary btn-block">Registar esta receita</button>
 </form>
 {% endif %}
 
 {% if resultado %}
-<div class="card">
-  <h2>Resultado</h2>
-  <div class="macro-grid">
+<div class="card-lg" style="margin-top:14px;">
+  <span class="section-label">Resultado</span>
+  <div class="macro-grid" style="margin-top:8px;">
     <div class="macro-box"><div class="value">🔥 {{ resultado.total.kcal|round|int }}</div><div class="label">kcal</div></div>
     <div class="macro-box"><div class="value">🥩 {{ resultado.total.proteina_g|round|int }}g</div><div class="label">proteína</div></div>
     <div class="macro-box"><div class="value">🍚 {{ resultado.total.hidratos_g|round|int }}g</div><div class="label">hidratos</div></div>
     <div class="macro-box"><div class="value">🥑 {{ resultado.total.gordura_g|round|int }}g</div><div class="label">gordura</div></div>
   </div>
 
-  <h2 style="margin-top:16px;">Itens registados</h2>
+  <span class="section-label" style="margin-top:14px;display:block;">Itens registados</span>
   <ul class="item-list">
     {% for item in resultado.itens %}
       <li>
@@ -74,16 +76,9 @@
 </div>
 {% endif %}
 
-<style>
-  .item-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
-  .item-row input[name="chave"] { flex:2 1 160px; }
-  .item-row input[name="quantidade"] { flex:0 0 70px; }
-  .item-row select[name="unidade"] { flex:1 1 130px; }
-  .item-row .btn-remove {
-    flex:0 0 auto; border:none; background:transparent; color:var(--red);
-    font-size:1.1rem; cursor:pointer; padding:4px 8px;
-  }
-</style>
+{% endblock %}
+
+{% block scripts %}
 <script>
   function novaLinha() {
     var cont = document.getElementById('itens-refeicao');

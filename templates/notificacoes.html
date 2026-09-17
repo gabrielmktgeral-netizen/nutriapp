@@ -1,35 +1,38 @@
-{% extends "base.html" %}
-{% block title %}Notificações{% endblock %}
-{% block content %}
-<h1>🔔 Notificações</h1>
-<p class="subtitle">Avisos no telemóvel para não te esqueceres de registar refeições ou treinar.</p>
+{% extends "base_organic.html" %}
 
-<div class="card" style="font-size:0.85rem;">
-  <strong>Como funciona:</strong>
-  <ul style="padding-left:18px; margin:8px 0 0;">
+{% block titulo %}Notificações · NutriApp{% endblock %}
+{% block cabecalho %}🔔 Notificações{% endblock %}
+{% block subcabecalho %}Avisos para não te esqueceres de registar{% endblock %}
+
+{% block conteudo %}
+
+<div class="card-lg">
+  <span class="section-label">Como funciona</span>
+  <ul style="padding-left:18px; margin:8px 0 0; font-size:13px; line-height:1.6; color:var(--n800);">
     <li>Android: funciona logo, em qualquer navegador.</li>
     <li>iPhone: adiciona primeiro o site ao ecrã principal (Partilhar → Adicionar ao ecrã principal), depois ativa aqui.</li>
     <li>Avisamos ~30-90 min depois da hora de uma refeição não registada, e à hora do treino.</li>
   </ul>
 </div>
 
-<div class="card">
-  <h2 id="status-title">A verificar estado...</h2>
-  <p class="subtitle" id="status-text" style="margin-bottom:14px;"></p>
-  <button class="btn" id="btn-ativar">Ativar notificações</button>
-  <button class="btn btn-secondary" id="btn-desativar" hidden>Desativar neste dispositivo</button>
+<div class="card-lg">
+  <span class="section-label" id="status-title">A verificar estado...</span>
+  <p class="subtitle" id="status-text"></p>
+  <button class="btn btn-primary btn-block" id="btn-ativar">Ativar notificações</button>
+  <button class="btn btn-secondary btn-block" id="btn-desativar" hidden>Desativar neste dispositivo</button>
 </div>
 
-<div class="card">
-  <h2>Testar</h2>
-  <p class="subtitle" style="margin-bottom:10px;">
-    {{ n_subs }} dispositivo(s) ativo(s) neste site.
-  </p>
+<div class="card-lg">
+  <span class="section-label">Testar</span>
+  <p class="subtitle">{{ n_subs }} dispositivo(s) ativo(s) neste site.</p>
   <form method="post" action="{{ url_for('notificacoes_teste') }}">
-    <button class="btn btn-outline" type="submit">Enviar notificação de teste</button>
+    <button class="btn btn-secondary btn-block" type="submit">Enviar notificação de teste</button>
   </form>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
   const VAPID_PUBLIC_KEY = "{{ vapid_public_key }}";
 

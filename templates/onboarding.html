@@ -1,10 +1,14 @@
-{% extends "base.html" %}
-{% block title %}Perfil - NutriApp{% endblock %}
-{% block content %}
-<h1>👤 O teu perfil</h1>
-<p class="subtitle">Preenche isto uma vez. Podes voltar aqui para atualizar.</p>
+{% extends "base_organic.html" %}
 
-<form method="post" class="card">
+{% block titulo %}Editar perfil · NutriApp{% endblock %}
+{% block cabecalho %}👤 Os teus dados{% endblock %}
+{% block subcabecalho %}Preenche uma vez, atualiza quando quiseres{% endblock %}
+
+{% block conteudo %}
+
+<a href="{{ url_for('perfil') }}" style="display:inline-block;font-size:13px;font-weight:700;">← Voltar ao perfil</a>
+
+<form method="post" class="card-lg stack">
   <div class="two-col">
     <div class="field">
       <label>Idade</label>
@@ -53,7 +57,7 @@
     <input type="number" step="0.1" name="peso_pretendido" value="{{ profile.peso_pretendido if profile else '' }}">
   </div>
 
-  <h2 style="margin-top:20px;">⏰ Horários</h2>
+  <span class="section-label accent" style="margin-top:6px;">⏰ Horários</span>
   <div class="two-col">
     <div class="field">
       <label>Pequeno-almoço</label>
@@ -79,74 +83,75 @@
     <input type="time" name="hora_treino" value="{{ profile.hora_treino if profile else '' }}">
   </div>
 
-  <h2 style="margin-top:20px;">⚡ Refeições habituais</h2>
+  <span class="section-label accent" style="margin-top:6px;">⚡ Refeições habituais</span>
   <p class="subtitle" style="margin-top:-6px;">
     O que costumas comer nesta refeição, quase sempre? Configura e depois tens um botão para
     registar num clique, sem escrever tudo outra vez. Deixa em branco se varia muito.
   </p>
   {% for tipo, label in [("pequeno_almoco", "Pequeno-almoço"), ("almoco", "Almoço"), ("lanche", "Lanche"), ("jantar", "Jantar")] %}
-  <div class="field" style="flex-direction:row; align-items:center; justify-content:space-between; gap:8px;">
-    <span>
+  <div class="field-row" style="background:var(--bg);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;">
+    <span style="font-size:13px;">
       <strong>{{ label }}:</strong>
       {% if habitos_resumo and habitos_resumo.get(tipo) %}
         {{ habitos_resumo[tipo] }}
       {% else %}
-        <span class="subtitle" style="margin:0;">não configurado</span>
+        <span class="muted">não configurado</span>
       {% endif %}
     </span>
-    <a href="{{ url_for('editar_habitual', tipo=tipo) }}" class="btn btn-sm btn-outline" style="flex-shrink:0;">✏️ Editar</a>
+    <a href="{{ url_for('editar_habitual', tipo=tipo) }}" class="btn btn-secondary btn-sm" style="flex-shrink:0;">✏️ Editar</a>
   </div>
   {% endfor %}
 
-  <h2 style="margin-top:20px;">🔕 Lembretes</h2>
+  <span class="section-label accent" style="margin-top:6px;">🔕 Lembretes</span>
   <p class="subtitle" style="margin-top:-6px;">
     Não costumas comer alguma destas refeições? Ativa para eu parar de te notificar sobre ela.
     Continuas a poder registá-la à mão sempre que quiseres (ex: ao fim de semana) — só paro de avisar.
   </p>
-  <div class="field" style="flex-direction:row; align-items:center; gap:8px;">
-    <input type="checkbox" name="pular_lembrete_pequeno_almoco" id="pl_pa" style="width:auto;"
+  <div class="field-check">
+    <input type="checkbox" name="pular_lembrete_pequeno_almoco" id="pl_pa"
            {{ 'checked' if profile and profile.pular_lembrete_pequeno_almoco }}>
-    <label for="pl_pa" style="margin:0;">Não costumo tomar pequeno-almoço — não me avises</label>
+    <label for="pl_pa">Não costumo tomar pequeno-almoço — não me avises</label>
   </div>
-  <div class="field" style="flex-direction:row; align-items:center; gap:8px;">
-    <input type="checkbox" name="pular_lembrete_almoco" id="pl_al" style="width:auto;"
+  <div class="field-check">
+    <input type="checkbox" name="pular_lembrete_almoco" id="pl_al"
            {{ 'checked' if profile and profile.pular_lembrete_almoco }}>
-    <label for="pl_al" style="margin:0;">Não costumo almoçar — não me avises</label>
+    <label for="pl_al">Não costumo almoçar — não me avises</label>
   </div>
-  <div class="field" style="flex-direction:row; align-items:center; gap:8px;">
-    <input type="checkbox" name="pular_lembrete_lanche" id="pl_la" style="width:auto;"
+  <div class="field-check">
+    <input type="checkbox" name="pular_lembrete_lanche" id="pl_la"
            {{ 'checked' if profile and profile.pular_lembrete_lanche }}>
-    <label for="pl_la" style="margin:0;">Não costumo lanchar — não me avises</label>
+    <label for="pl_la">Não costumo lanchar — não me avises</label>
   </div>
-  <div class="field" style="flex-direction:row; align-items:center; gap:8px;">
-    <input type="checkbox" name="pular_lembrete_jantar" id="pl_ja" style="width:auto;"
+  <div class="field-check">
+    <input type="checkbox" name="pular_lembrete_jantar" id="pl_ja"
            {{ 'checked' if profile and profile.pular_lembrete_jantar }}>
-    <label for="pl_ja" style="margin:0;">Não costumo jantar — não me avises</label>
+    <label for="pl_ja">Não costumo jantar — não me avises</label>
   </div>
 
-  <button class="btn" type="submit">Guardar perfil</button>
+  <button class="btn btn-primary btn-block" type="submit">Guardar perfil</button>
 </form>
 
-<p class="subtitle" style="font-size:0.85rem;">
+<p class="subtitle">
   Nota: não é possível escolher exatamente de que zona corporal a gordura será perdida —
   isso depende de fatores genéticos e individuais.
 </p>
 
-<div class="card">
-  <h2>🥕 Alimentos</h2>
-  <p class="subtitle" style="margin-bottom:12px;">Vê e corrige os valores de qualquer alimento, ou cria alimentos novos.</p>
-  <a href="{{ url_for('gerir_alimentos') }}" class="btn btn-outline">Gerir alimentos →</a>
+<div class="card-lg">
+  <span class="section-label">🥕 Alimentos</span>
+  <p class="subtitle">Vê e corrige os valores de qualquer alimento, ou cria alimentos novos.</p>
+  <a href="{{ url_for('gerir_alimentos') }}" class="btn btn-secondary btn-block">Gerir alimentos →</a>
 </div>
 
-<div class="card">
-  <h2>🧊 A tua despensa</h2>
-  <p class="subtitle" style="margin-bottom:12px;">O que tens em casa — usado pelo assistente para sugerir refeições.</p>
-  <a href="{{ url_for('despensa') }}" class="btn btn-outline">Gerir despensa →</a>
+<div class="card-lg">
+  <span class="section-label">🧊 A tua despensa</span>
+  <p class="subtitle">O que tens em casa — usado pelo assistente para sugerir refeições.</p>
+  <a href="{{ url_for('despensa') }}" class="btn btn-secondary btn-block">Gerir despensa →</a>
 </div>
 
-<div class="card">
-  <h2>📖 As tuas receitas</h2>
-  <p class="subtitle" style="margin-bottom:12px;">Cria as tuas próprias receitas — calorias calculadas automaticamente.</p>
-  <a href="{{ url_for('receitas') }}" class="btn btn-outline">Gerir receitas →</a>
+<div class="card-lg">
+  <span class="section-label">📖 As tuas receitas</span>
+  <p class="subtitle">Cria as tuas próprias receitas — calorias calculadas automaticamente.</p>
+  <a href="{{ url_for('receitas') }}" class="btn btn-secondary btn-block">Gerir receitas →</a>
 </div>
+
 {% endblock %}

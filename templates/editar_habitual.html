@@ -1,19 +1,21 @@
-{% extends "base.html" %}
+{% extends "base_organic.html" %}
 {% from "_item_row_macro.html" import item_row with context %}
-{% block title %}{{ titulo }}{% endblock %}
-{% block content %}
-<h1>⚡ {{ titulo }}</h1>
-<p class="subtitle">O que costumas comer nesta refeição. Depois tens um botão "Registar num clique" no menu Hoje.</p>
+
+{% block titulo %}{{ titulo }} · NutriApp{% endblock %}
+{% block cabecalho %}⚡ {{ titulo }}{% endblock %}
+{% block subcabecalho %}O que costumas comer nesta refeição{% endblock %}
+
+{% block conteudo %}
 
 {% include "_datalist_alimentos.html" %}
 
 {% if formato_antigo %}
-<div class="card">
-  <p class="subtitle" style="font-size:0.85rem;">⚠️ Isto estava guardado no formato antigo ("{{ texto_atual }}"). Escolhe os alimentos abaixo para atualizar.</p>
+<div class="card-lg">
+  <p class="subtitle" style="margin:0;">⚠️ Isto estava guardado no formato antigo ("{{ texto_atual }}"). Escolhe os alimentos abaixo para atualizar.</p>
 </div>
 {% endif %}
 
-<form method="post" class="card">
+<form method="post" class="card-lg stack">
   <div class="field">
     <label>Alimentos</label>
     <div id="itens-habitual">
@@ -25,39 +27,18 @@
         {{ item_row() }}
       {% endif %}
     </div>
-    <button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="novaLinha()">+ Adicionar alimento</button>
+    <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px;align-self:flex-start;" onclick="novaLinha()">+ Adicionar alimento</button>
   </div>
-  <button class="btn" type="submit" style="margin-top:14px;">Guardar</button>
+  <button class="btn btn-primary btn-block" type="submit">Guardar</button>
 </form>
 
 {% include "_criar_alimento.html" %}
 
-<a href="{{ url_for('onboarding') }}" style="display:inline-block; margin-top:10px; font-size:0.85rem;">← Voltar ao perfil</a>
+<a href="{{ url_for('onboarding') }}" style="display:inline-block; margin-top:6px; font-size:13px; font-weight:700;">← Voltar ao perfil</a>
 
-<style>
-  .item-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
-  .item-row input[name="chave"] { flex:2 1 160px; }
-  .item-row input[name="quantidade"] { flex:0 0 70px; }
-  .item-row select[name="unidade"] { flex:1 1 130px; }
-  .item-row .btn-remove {
-    flex:0 0 auto; border:none; background:transparent; color:var(--red);
-    font-size:1.1rem; cursor:pointer; padding:4px 8px;
-  }
-  .info-icon {
-    position:relative; flex:0 0 auto; cursor:pointer; color:var(--green-dark);
-    font-size:1.05rem; padding:2px 4px;
-  }
-  .info-icon .tooltip {
-    display:none; position:absolute; bottom:135%; left:50%; transform:translateX(-50%);
-    background:var(--text); color:#fff; padding:8px 10px; border-radius:8px;
-    font-size:0.8rem; line-height:1.5; white-space:nowrap; z-index:5;
-    box-shadow:var(--shadow-hover);
-  }
-  @media (hover: hover) {
-    .info-icon:hover .tooltip { display:block; }
-  }
-  .info-icon.aberto .tooltip { display:block; }
-</style>
+{% endblock %}
+
+{% block scripts %}
 <script>
   function novaLinha() {
     var cont = document.getElementById('itens-habitual');
