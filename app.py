@@ -269,22 +269,46 @@ LEMBRETE_TIPOS = [
 ]
 
 
-@app.route("/perfil")
+@app.route("/perfil", methods=["GET", "POST"])
 def perfil():
+    if request.method == "POST":
+        data = {
+            "idade": int(request.form["idade"]),
+            "sexo": request.form["sexo"],
+            "altura_cm": float(request.form["altura_cm"]),
+            "peso_kg": float(request.form["peso_kg"]),
+            "nivel_atividade": request.form["nivel_atividade"],
+            "objetivo": request.form["objetivo"],
+            "peso_pretendido": float(request.form["peso_pretendido"]) if request.form.get("peso_pretendido") else None,
+            "hora_pequeno_almoco": request.form.get("hora_pequeno_almoco", "08:00"),
+            "hora_almoco": request.form.get("hora_almoco", "13:00"),
+            "hora_lanche": request.form.get("hora_lanche", "17:00"),
+            "hora_jantar": request.form.get("hora_jantar", "20:00"),
+            "hora_treino": request.form.get("hora_treino", ""),
+        }
+        # atualizar_perfil só muda estes campos — as refeições habituais e os
+        # lembretes (editados noutros formulários desta mesma página) não se perdem.
+        atualizar_perfil(**data)
+        flash("Perfil atualizado! 🎉", "success")
+        return redirect(url_for("perfil"))
+
     profile = db.get_profile() if db.configured() else None
     if not profile or not profile.get("idade"):
         return redirect(url_for("onboarding"))
 
     targets = nc.macro_targets(profile) or {"kcal": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}
-    objetivo_atual = profile.get("objetivo")
 
-    dados_perfil = [
-        {"label": "Sexo", "valor": "Masculino" if profile.get("sexo") == "M" else "Feminino"},
-        {"label": "Idade", "valor": f"{profile.get('idade')} anos"},
-        {"label": "Altura", "valor": f"{profile.get('altura_cm')} cm"},
-        {"label": "Peso atual", "valor": f"{profile.get('peso_kg')} kg"},
-        {"label": "Atividade", "valor": nc.ACTIVITY_LABELS.get(profile.get("nivel_atividade"), "")},
-    ]
+    habitos_resumo = {}
+    alimentos_custom = db.get_custom_foods() if db.configured() else []
+    extra = mi.dict_custom(alimentos_custom)
+    peso_unidade = mi.dict_peso_unidade(alimentos_custom)
+    for tipo, campo in HABITO_CAMPO.items():
+        texto = (profile.get(campo) or "").strip()
+        if not texto:
+            habitos_resumo[tipo] = None
+        else:
+            itens = mi.resumo_itens(texto, extra=extra, peso_unidade=peso_unidade)
+            habitos_resumo[tipo] = ", ".join(it["nome"] for it in itens) if itens else texto
 
     lembretes = []
     for chave, nome in LEMBRETE_TIPOS:
@@ -297,22 +321,13 @@ def perfil():
         })
 
     return render_template(
-        "perfil.html", ecra="perfil", notificacoes_novas=False,
+        "perfil.html", ecra="perfil", notificacoes_novas=False, profile=profile,
         objetivo={"kcal": round(targets["kcal"]), "p": round(targets["protein_g"]),
                   "c": round(targets["carbs_g"]), "g": round(targets["fat_g"])},
-        objetivos=list(nc.GOAL_LABELS.items()), objetivo_atual=objetivo_atual,
-        perfil={"objetivo": nc.GOAL_LABELS.get(objetivo_atual, "")},
-        dados_perfil=dados_perfil, lembretes=lembretes,
+        goal_labels=nc.GOAL_LABELS, activity_labels=nc.ACTIVITY_LABELS,
+        perfil={"objetivo": nc.GOAL_LABELS.get(profile.get("objetivo"), "")},
+        habitos_resumo=habitos_resumo, lembretes=lembretes,
     )
-
-
-@app.route("/perfil/objetivo", methods=["POST"])
-def guardar_objetivo():
-    objetivo = request.form.get("objetivo", "")
-    if objetivo in nc.GOAL_LABELS:
-        atualizar_perfil(objetivo=objetivo)
-        flash("Objetivo atualizado! As tuas metas diárias já foram recalculadas.", "success")
-    return redirect(url_for("perfil"))
 
 
 @app.route("/perfil/lembrete", methods=["POST"])
@@ -953,11 +968,13 @@ def sugestao():
     prontas = [{
         "id": it["receita"]["nome"], "nome": it["receita"]["nome"], "kcal": round(it["receita"]["kcal"]),
         "p": round(it["receita"]["proteina_g"]), "c": round(it["receita"]["hidratos_g"]), "g": round(it["receita"]["gordura_g"]),
+        "ingredientes": it["receita"].get("ingredientes", []), "preparo": it["receita"].get("preparo", []),
     } for it in receitas_prontas]
     quase_la = [{
         "id": it["receita"]["nome"], "nome": it["receita"]["nome"], "kcal": round(it["receita"]["kcal"]),
         "p": round(it["receita"]["proteina_g"]), "c": round(it["receita"]["hidratos_g"]), "g": round(it["receita"]["gordura_g"]),
         "falta": it["faltam"][0] if it["faltam"] else "",
+        "ingredientes": it["receita"].get("ingredientes", []), "preparo": it["receita"].get("preparo", []),
     } for it in receitas_quase]
 
     return render_template(

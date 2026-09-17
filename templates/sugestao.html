@@ -17,20 +17,39 @@
     <div class="stack">
       <span class="section-label">Prontas a fazer</span>
       {% for r in prontas %}
-        <div class="tile">
-          <div class="tile-head">
-            <span class="t">{{ r.nome }}</span>
-            <span class="k">{{ r.kcal }} kcal</span>
+        <details class="tile">
+          <summary>
+            <div class="tile-head">
+              <span class="t">{{ r.nome }}</span>
+              <span class="k">{{ r.kcal }} kcal</span>
+              <span class="chev">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+              </span>
+            </div>
+            <span class="macro-line">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
+          </summary>
+          <div class="recipe-body">
+            {% if r.ingredientes %}
+              <div>
+                <h4>Ingredientes</h4>
+                <ul>{% for ing in r.ingredientes %}<li>{{ ing }}</li>{% endfor %}</ul>
+              </div>
+            {% endif %}
+            {% if r.preparo %}
+              <div>
+                <h4>Preparo</h4>
+                <ol>{% for passo in r.preparo %}<li>{{ passo }}</li>{% endfor %}</ol>
+              </div>
+            {% endif %}
+            <div class="foot">
+              <span class="pill">Tens tudo em casa</span>
+              <form method="post" action="{{ url_for('registar_receita') }}">
+                <input type="hidden" name="receita_id" value="{{ r.id }}">
+                <button class="btn btn-primary btn-sm" type="submit">Registar</button>
+              </form>
+            </div>
           </div>
-          <span class="macro-line">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
-          <div class="foot">
-            <span class="pill">Tens tudo em casa</span>
-            <form method="post" action="{{ url_for('registar_receita') }}">
-              <input type="hidden" name="receita_id" value="{{ r.id }}">
-              <button class="btn btn-primary btn-sm" type="submit">Registar</button>
-            </form>
-          </div>
-        </div>
+        </details>
       {% else %}
         <p class="muted">Nada pronto a fazer com o que tens em casa. Adiciona alimentos à despensa.</p>
       {% endfor %}
@@ -39,20 +58,39 @@
     <div class="stack">
       <span class="section-label accent">Quase lá</span>
       {% for r in quase_la %}
-        <div class="tile">
-          <div class="tile-head">
-            <span class="t">{{ r.nome }}</span>
-            <span class="k">{{ r.kcal }} kcal</span>
+        <details class="tile">
+          <summary>
+            <div class="tile-head">
+              <span class="t">{{ r.nome }}</span>
+              <span class="k">{{ r.kcal }} kcal</span>
+              <span class="chev">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+              </span>
+            </div>
+            <span class="macro-line">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
+          </summary>
+          <div class="recipe-body">
+            {% if r.ingredientes %}
+              <div>
+                <h4>Ingredientes</h4>
+                <ul>{% for ing in r.ingredientes %}<li>{{ ing }}</li>{% endfor %}</ul>
+              </div>
+            {% endif %}
+            {% if r.preparo %}
+              <div>
+                <h4>Preparo</h4>
+                <ol>{% for passo in r.preparo %}<li>{{ passo }}</li>{% endfor %}</ol>
+              </div>
+            {% endif %}
+            <div class="foot">
+              <span class="pill pill-accent">Falta {{ r.falta }}</span>
+              <form method="post" action="{{ url_for('lista_compras') }}">
+                <input type="hidden" name="receita_id" value="{{ r.id }}">
+                <button class="btn btn-secondary btn-sm" type="submit">+ à despensa</button>
+              </form>
+            </div>
           </div>
-          <span class="macro-line">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
-          <div class="foot">
-            <span class="pill pill-accent">Falta {{ r.falta }}</span>
-            <form method="post" action="{{ url_for('lista_compras') }}">
-              <input type="hidden" name="receita_id" value="{{ r.id }}">
-              <button class="btn btn-secondary btn-sm" type="submit">+ à despensa</button>
-            </form>
-          </div>
-        </div>
+        </details>
       {% else %}
         <p class="muted">Nada quase pronto de momento.</p>
       {% endfor %}

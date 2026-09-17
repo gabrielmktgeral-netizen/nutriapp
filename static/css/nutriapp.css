@@ -351,6 +351,17 @@ button { font-family: var(--f-body); }
 .tile .foot { display: flex; align-items: center; gap: 8px; }
 .tile .foot .btn { margin-left: auto; }
 
+/* .tile como <details> — abre para mostrar ingredientes/preparo (igual ao Início) */
+details.tile { padding: 0; cursor: pointer; }
+details.tile > summary { list-style: none; padding: 13px 15px; display: flex; flex-direction: column; gap: 8px; }
+details.tile > summary::-webkit-details-marker { display: none; }
+details.tile .tile-head { align-items: center; }
+details.tile .chev { flex: none; color: var(--n700); transition: transform 0.15s; }
+details.tile[open] .chev { transform: rotate(180deg); }
+details.tile .recipe-body { padding: 0 15px 15px; display: flex; flex-direction: column; gap: 10px; }
+details.tile .recipe-body h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--n700); margin: 0 0 4px; }
+details.tile .recipe-body ul, details.tile .recipe-body ol { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.55; color: var(--n800); }
+
 .section-label {
   font-size: 11px;
   font-weight: 700;
@@ -423,18 +434,23 @@ button { font-family: var(--f-body); }
 }
 .seg a[aria-current="true"], .seg button[aria-pressed="true"] { background: var(--s600); color: var(--bg); }
 
-.choices { display: flex; gap: 6px; }
+.choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .choices button {
-  flex: 1;
-  min-height: 44px;
+  min-height: 52px;
+  min-width: 0;
+  padding: 6px 4px;
   border: 1px solid var(--divider);
-  border-radius: 999px;
+  border-radius: var(--r-md);
   background: transparent;
   color: var(--n800);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 .choices button[aria-pressed="true"] { background: var(--s600); border-color: var(--s600); color: var(--bg); }
 
