@@ -100,7 +100,20 @@
       </div>
 
       <div class="card-lg">
-        <div class="pf-sechead"><span class="section-label" style="margin:0;">⚡ Refeições habituais</span></div>
+        {% set tipos_em_falta = [("pequeno_almoco", "Pequeno-almoço"), ("almoco", "Almoço"), ("lanche", "Lanche"), ("jantar", "Jantar")] | rejectattr('0', 'in', refeicoes_habituais | map(attribute='tipo') | list) | list %}
+        <div class="pf-sechead">
+          <span class="section-label" style="margin:0;">⚡ Refeições habituais</span>
+          {% if tipos_em_falta %}
+            <details class="pf-add">
+              <summary class="pf-add-btn" aria-label="Adicionar refeição habitual">+</summary>
+              <div class="pf-add-menu">
+                {% for tipo, label in tipos_em_falta %}
+                  <a class="btn btn-secondary btn-sm" href="{{ url_for('editar_habitual', tipo=tipo) }}">+ Configurar {{ label.lower() }}</a>
+                {% endfor %}
+              </div>
+            </details>
+          {% endif %}
+        </div>
         <div class="pf-stack" style="margin-top:8px;">
           {% for r in refeicoes_habituais %}
             <details class="pf-meal" {% if loop.first %}open{% endif %}>
@@ -124,11 +137,6 @@
             </details>
           {% else %}
             <p class="muted">Ainda não tens refeições habituais guardadas.</p>
-          {% endfor %}
-          {% for tipo, label in [("pequeno_almoco", "Pequeno-almoço"), ("almoco", "Almoço"), ("lanche", "Lanche"), ("jantar", "Jantar")] %}
-            {% if tipo not in refeicoes_habituais | map(attribute='tipo') | list %}
-              <a class="btn btn-secondary btn-sm" href="{{ url_for('editar_habitual', tipo=tipo) }}" style="align-self:flex-start;">+ Configurar {{ label.lower() }}</a>
-            {% endif %}
           {% endfor %}
         </div>
       </div>

@@ -853,11 +853,11 @@ details.tile .recipe-body ul, details.tile .recipe-body ol { margin: 0; padding-
 .pf-field label { font-size: 12px; font-weight: 700; color: var(--n800); }
 .pf-input, .pf-select {
   font-family: var(--f-body); font-size: 15px; color: var(--text);
-  background: var(--bg); border: 1px solid transparent; border-radius: 999px;
+  background: var(--surface); border: 1px solid transparent; border-radius: 999px;
   padding: 10px 16px; width: 100%; min-width: 0;
 }
 .pf-select { appearance: none; -webkit-appearance: none; padding-right: 30px; cursor: pointer; }
-.pf-input:focus, .pf-select:focus { outline: none; border-color: var(--s600); background: var(--surface); }
+.pf-input:focus, .pf-select:focus { outline: none; border-color: var(--s600); background: var(--bg); }
 .pf-sel { position: relative; }
 .pf-sel svg { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--n700); }
 
@@ -882,6 +882,24 @@ details.tile .recipe-body ul, details.tile .recipe-body ol { margin: 0; padding-
 .pf-sechead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .pf-sechead a { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--a700); text-decoration: none; }
 .pf-count { margin-left: auto; font-size: 12px; color: var(--n700); font-weight: 700; }
+
+.pf-add { position: relative; margin-left: auto; }
+.pf-add > summary { list-style: none; cursor: pointer; }
+.pf-add > summary::-webkit-details-marker { display: none; }
+.pf-add-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 999px;
+  background: var(--s200); color: var(--s800);
+  font-size: 16px; font-weight: 700; line-height: 1;
+}
+.pf-add[open] .pf-add-btn { background: var(--s600); color: var(--bg); }
+.pf-add-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--surface); border-radius: var(--r-md);
+  padding: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.15); min-width: 190px;
+}
+.pf-add-menu .btn { white-space: nowrap; }
 
 .pf-link {
   display: flex; align-items: center; gap: 12px; background: var(--surface);
