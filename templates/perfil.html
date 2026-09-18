@@ -141,27 +141,6 @@
         </div>
       </div>
 
-      <div class="card-lg">
-        <div class="pf-sechead">
-          <span class="section-label" style="margin:0;">📖 Receitas guardadas</span>
-          <span class="pf-count">{{ minhas_receitas|length }}</span>
-        </div>
-        <div class="pf-recipes" style="margin-top:8px;">
-          {% for rc in minhas_receitas %}
-            <a class="pf-recipe" href="{{ url_for('editar_receita', page_id=rc.page_id) }}">
-              <span class="thumb">📖</span>
-              <span class="txt">
-                <b>{{ rc.nome }}</b>
-                <span>{{ rc.kcal|round|int }} kcal</span>
-              </span>
-            </a>
-          {% else %}
-            <p class="muted">Ainda não guardaste receitas.</p>
-          {% endfor %}
-        </div>
-        <a class="btn btn-secondary btn-block" href="{{ url_for('receitas') }}" style="margin-top:10px;">Gerir receitas</a>
-      </div>
-
     </div>
 
     <div class="stack">
@@ -213,6 +192,13 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"></path><path d="M7 8h10"></path><path d="M7 12h5"></path><path d="M16 19h6"></path><path d="M19 16v6"></path></svg>
             </span>
             <span class="txt"><b>Gerir alimentos</b><span>Adicionar e editar alimentos</span></span>
+            {{ chev() }}
+          </a>
+          <a class="pf-link" href="{{ url_for('receitas') }}">
+            <span class="ico">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"></path></svg>
+            </span>
+            <span class="txt"><b>Receitas guardadas</b><span>{{ minhas_receitas|length }} receita{{ 's' if minhas_receitas|length != 1 else '' }} · gerir</span></span>
             {{ chev() }}
           </a>
         </div>
