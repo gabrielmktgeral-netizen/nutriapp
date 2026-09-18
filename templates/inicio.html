@@ -107,17 +107,37 @@
                     <button class="btn btn-secondary btn-sm" type="submit">⚡ Habitual</button>
                   </form>
                 {% endif %}
-                {% if r.duplicar_origens %}
-                  <form method="post" action="{{ url_for('duplicar_refeicao') }}" class="acts" style="gap:6px;">
-                    <input type="hidden" name="tipo_destino" value="{{ r.tipo_slug }}">
-                    <select name="tipo_origem" style="font-size:0.8rem; border-radius:8px;">
-                      {% for t2, label2 in r.duplicar_origens %}
-                        <option value="{{ t2 }}">{{ label2 }}</option>
-                      {% endfor %}
-                    </select>
-                    <button class="btn btn-secondary btn-sm" type="submit">📋 Duplicar</button>
-                  </form>
-                {% endif %}
+                <details class="pf-add">
+                  <summary class="btn btn-secondary btn-sm" style="list-style:none;cursor:pointer;">📋 Duplicar</summary>
+                  <div class="pf-add-menu" style="min-width:230px;">
+                    <form method="post" action="{{ url_for('duplicar_de_outro_dia') }}" class="stack dup-form" style="gap:8px;" onsubmit="return dupValidar(this)">
+                      <input type="hidden" name="tipo_destino" value="{{ r.tipo_slug }}">
+                      <input type="hidden" name="data_origem" class="dup-data">
+                      <div class="field" style="gap:4px;">
+                        <label style="font-size:11px;">De que dia?</label>
+                        <div class="dup-dias">
+                          {% for qd in dias_rapidos_duplicar %}
+                            <button type="button" class="dup-dia-btn" data-data="{{ qd.data }}" onclick="dupEscolherDia(this)">{{ qd.label }}</button>
+                          {% endfor %}
+                          <details class="dup-mais">
+                            <summary class="dup-dia-btn dup-mais-btn">Mais antiga…</summary>
+                            <input type="date" class="dup-data-antiga" max="{{ dias_rapidos_duplicar[-1].data if dias_rapidos_duplicar else today }}" onchange="dupEscolherDataAntiga(this)" style="margin-top:6px;font-size:13px;width:100%;">
+                          </details>
+                        </div>
+                        <span class="dup-erro" style="display:none;color:var(--a800);font-size:11px;">Escolhe o dia.</span>
+                      </div>
+                      <div class="field" style="gap:4px;">
+                        <label style="font-size:11px;">Qual refeição desse dia?</label>
+                        <select name="tipo_origem" required style="font-size:13px;">
+                          {% for key, info in meal_labels.items() %}
+                            <option value="{{ key }}">{{ info[0] }} {{ info[1] }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <button class="btn btn-primary btn-sm" type="submit">Duplicar</button>
+                    </form>
+                  </div>
+                </details>
               {% endif %}
             </div>
           </div>
@@ -162,4 +182,31 @@
     </a>
   </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function dupEscolherDia(btn) {
+    var form = btn.closest('form');
+    form.querySelectorAll('.dup-dia-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    form.querySelector('.dup-data').value = btn.dataset.data;
+    form.querySelector('.dup-erro').style.display = 'none';
+    var antiga = form.querySelector('.dup-data-antiga');
+    if (antiga) antiga.value = '';
+  }
+  function dupEscolherDataAntiga(input) {
+    var form = input.closest('form');
+    form.querySelectorAll('.dup-dia-btn').forEach(function (b) { b.classList.remove('active'); });
+    form.querySelector('.dup-data').value = input.value;
+    form.querySelector('.dup-erro').style.display = 'none';
+  }
+  function dupValidar(form) {
+    if (!form.querySelector('.dup-data').value) {
+      form.querySelector('.dup-erro').style.display = 'block';
+      return false;
+    }
+    return true;
+  }
+</script>
 {% endblock %}

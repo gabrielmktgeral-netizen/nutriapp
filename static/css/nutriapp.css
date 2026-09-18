@@ -901,6 +901,24 @@ details.tile .recipe-body ul, details.tile .recipe-body ol { margin: 0; padding-
 }
 .pf-add-menu .btn { white-space: nowrap; }
 
+/* seletor rápido de dia (duplicar refeição) */
+.dup-dias { display: flex; flex-wrap: wrap; gap: 5px; }
+.dup-dia-btn {
+  font-family: var(--f-body); font-size: 12px; font-weight: 700;
+  color: var(--n800); background: var(--bg); border: 1px solid var(--divider);
+  border-radius: 999px; padding: 5px 10px; cursor: pointer; list-style: none;
+  display: inline-block;
+}
+.dup-dia-btn::-webkit-details-marker { display: none; }
+.dup-dia-btn.active { background: var(--s600); border-color: var(--s600); color: var(--bg); }
+.dup-mais { display: inline-block; }
+.dup-mais-btn { color: var(--a700); }
+.dup-mais[open] .dup-mais-btn { background: var(--a200); border-color: var(--a300); }
+.dup-data-antiga {
+  font-family: var(--f-body); color: var(--text); background: var(--surface);
+  border: 1px solid transparent; border-radius: var(--r-md); padding: 6px 10px;
+}
+
 .pf-link {
   display: flex; align-items: center; gap: 12px; background: var(--surface);
   border-radius: var(--r-md); padding: 12px; cursor: pointer;

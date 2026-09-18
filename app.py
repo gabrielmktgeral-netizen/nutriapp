@@ -76,6 +76,18 @@ def week_bounds(ref_date):
     return monday, sunday
 
 
+DIA_SEMANA_ABBR = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+
+
+def dias_rapidos_duplicar(today):
+    """Só 'Ontem' e 'Antes de ontem' — para o resto há o botão 'Mais
+    antiga' (calendário) no template."""
+    return [
+        {"data": (today - timedelta(days=1)).isoformat(), "label": "Ontem"},
+        {"data": (today - timedelta(days=2)).isoformat(), "label": "Antes de ontem"},
+    ]
+
+
 def gerar_nota_periodica(targets, meals_ultimos_3_dias, excluidos_nomes=None):
     """De 3 em 3 dias: analisa a média de proteína consumida e, se estiver
     abaixo do objetivo, devolve uma nota com sugestões de receitas ricas
@@ -258,6 +270,7 @@ def index():
         dia=dia_organic, peso=peso_organic, semana=semana_organic,
         treino=treino_organic, proxima_refeicao_href=proxima_refeicao_href,
         abrir=request.args.get("abrir"),
+        dias_rapidos_duplicar=dias_rapidos_duplicar(today),
     )
 
 
