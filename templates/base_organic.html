@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f5ead8">
 <title>{% block titulo %}NutriApp{% endblock %}</title>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<link rel="icon" href="{{ url_for('static', filename='img/png/nutriapp-32.png') }}" sizes="32x32">
+<link rel="icon" href="{{ url_for('static', filename='img/png/nutriapp-64.png') }}" sizes="64x64">
+<link rel="icon" href="{{ url_for('static', filename='img/nutriapp-logo.svg') }}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/png/nutriapp-tile-192.png') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nutriapp.css') }}">
 </head>
 <body>
