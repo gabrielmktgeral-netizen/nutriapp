@@ -468,15 +468,46 @@ details.tile .recipe-body ul, details.tile .recipe-body ol { margin: 0; padding-
 .data-list { background: var(--surface); border-radius: var(--r-lg); padding: 2px 16px; }
 .data-list > div {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--divider);
 }
 .data-list > div:last-child { border-bottom: 0; }
-.data-list dt, .data-list .lbl { font-size: 13px; font-weight: 700; color: var(--n800); }
+.data-list dt, .data-list .lbl { font-size: 13px; font-weight: 700; color: var(--n800); flex: none; }
 .data-list dd, .data-list .val { margin: 0; font-size: 14px; font-weight: 700; text-align: right; }
+
+/* Linhas editáveis dentro do data-list: o valor vira um menu/campo,
+   mas mantém o mesmo aspeto discreto (sem caixa grande de formulário). */
+.data-list dt { max-width: 38%; }
+.data-list dd.val-edit, .data-list .val-edit { flex: 1; max-width: 66%; }
+.data-list select.val-input, .data-list input.val-input {
+  width: 100%;
+  text-align: right;
+  font-family: var(--f-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--n400);
+  padding: 4px 18px 4px 4px;
+  border-radius: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23645c50' stroke-width='2.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0 center;
+}
+.data-list input.val-input { background-image: none; padding-right: 4px; }
+.data-list select.val-input:focus, .data-list input.val-input:focus { outline: none; border-bottom-color: var(--s600); }
+.data-list .val-edit.compact { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+.data-list .val-edit.compact input.val-input { width: 60px; flex: none; }
+.data-list .val-edit.compact .unit { font-size: 12px; font-weight: 700; color: var(--n700); flex: none; }
 
 .toggle-row {
   display: flex;
@@ -814,3 +845,93 @@ details.tile .recipe-body ul, details.tile .recipe-body ol { margin: 0; padding-
   padding: 8px 10px; border-radius: var(--r-sm); white-space: nowrap; z-index: 5;
 }
 .info-icon:hover .tooltip, .info-icon:focus .tooltip, .info-icon.aberto .tooltip { display: block; }
+
+/* ===== Perfil (pf-*) — formulário de dados + escolha de objetivo ===== */
+.pf-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 420px) { .pf-fields { grid-template-columns: 1fr; } }
+.pf-field { display: flex; flex-direction: column; gap: 5px; }
+.pf-field label { font-size: 12px; font-weight: 700; color: var(--n800); }
+.pf-input, .pf-select {
+  font-family: var(--f-body); font-size: 15px; color: var(--text);
+  background: var(--bg); border: 1px solid transparent; border-radius: 999px;
+  padding: 10px 16px; width: 100%; min-width: 0;
+}
+.pf-select { appearance: none; -webkit-appearance: none; padding-right: 30px; cursor: pointer; }
+.pf-input:focus, .pf-select:focus { outline: none; border-color: var(--s600); background: var(--surface); }
+.pf-sel { position: relative; }
+.pf-sel svg { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--n700); }
+
+.pf-opt {
+  display: flex; align-items: center; gap: 12px; padding: 12px;
+  border-radius: var(--r-md); cursor: pointer;
+  background: var(--surface); border: 1.5px solid transparent;
+}
+.pf-opt:hover { border-color: var(--s400); }
+.pf-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.pf-opt .ring {
+  flex: none; width: 20px; height: 20px; border-radius: 999px;
+  border: 2px solid var(--n600); display: flex; align-items: center; justify-content: center;
+}
+.pf-opt .ring i { width: 10px; height: 10px; border-radius: 999px; background: transparent; }
+.pf-opt .name { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; }
+.pf-opt .meta { flex: none; font-size: 11px; color: var(--n700); }
+.pf-opt:has(input:checked) { background: var(--s200); border-color: var(--s600); }
+.pf-opt:has(input:checked) .ring { border-color: var(--s700); }
+.pf-opt:has(input:checked) .ring i { background: var(--s700); }
+
+.pf-sechead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pf-sechead a { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--a700); text-decoration: none; }
+.pf-count { margin-left: auto; font-size: 12px; color: var(--n700); font-weight: 700; }
+
+.pf-link {
+  display: flex; align-items: center; gap: 12px; background: var(--surface);
+  border-radius: var(--r-md); padding: 12px; cursor: pointer;
+  text-decoration: none; color: var(--text);
+}
+.pf-link:hover { background: var(--s200); }
+.pf-link .ico {
+  flex: none; width: 40px; height: 40px; border-radius: 999px;
+  background: var(--s200); color: var(--s800);
+  display: flex; align-items: center; justify-content: center;
+}
+.pf-link .txt { flex: 1; min-width: 0; }
+.pf-link .txt b { display: block; font-size: 14px; font-weight: 700; }
+.pf-link .txt span { display: block; font-size: 12px; color: var(--n700); }
+.pf-link .chev { flex: none; color: var(--n700); }
+
+.pf-meal { background: var(--surface); border-radius: var(--r-md); overflow: hidden; }
+.pf-meal > summary {
+  display: flex; align-items: center; gap: 10px; padding: 12px;
+  cursor: pointer; list-style: none;
+}
+.pf-meal > summary::-webkit-details-marker { display: none; }
+.pf-meal > summary:hover { background: var(--s200); }
+.pf-meal .hour {
+  flex: none; font-size: 11px; font-weight: 700; color: var(--s800);
+  background: var(--s200); padding: 4px 9px; border-radius: 999px;
+}
+.pf-meal .name { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; }
+.pf-meal .kcal { flex: none; font-size: 12px; color: var(--n700); }
+.pf-meal .chev { flex: none; color: var(--n700); transition: transform 160ms ease; }
+.pf-meal[open] .chev { transform: rotate(180deg); }
+.pf-meal-body { padding: 12px 14px 14px; background: var(--bg); display: flex; flex-direction: column; gap: 6px; }
+.pf-item { display: flex; align-items: baseline; gap: 8px; }
+.pf-item span:first-child { flex: 1; min-width: 0; font-size: 13px; }
+.pf-item span:last-child { flex: none; font-size: 12px; color: var(--n700); }
+.pf-meal-actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+
+.pf-recipes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 420px) { .pf-recipes { grid-template-columns: 1fr; } }
+.pf-recipe {
+  display: flex; gap: 10px; align-items: center; background: var(--surface);
+  border-radius: var(--r-md); padding: 8px; cursor: pointer;
+  text-decoration: none; color: var(--text);
+}
+.pf-recipe:hover { background: var(--s200); }
+.pf-recipe .thumb {
+  width: 40px; height: 40px; border-radius: var(--r-md); flex: none;
+  background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.pf-recipe .txt { flex: 1; min-width: 0; }
+.pf-recipe .txt b { display: block; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-recipe .txt span { display: block; font-size: 11px; color: var(--n700); }

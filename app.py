@@ -269,6 +269,15 @@ LEMBRETE_TIPOS = [
 ]
 
 
+GOAL_META = {
+    "perder_peso": "−20% kcal", "perder_gordura": "−15% kcal", "ganhar_massa": "+12% kcal",
+    "aumentar_peso": "+15% kcal", "manter_peso": "manutenção",
+    "melhorar_condicao": "manutenção", "recomposicao": "−5% kcal",
+}
+HORA_CAMPO_POR_TIPO = {"pequeno_almoco": "hora_pequeno_almoco", "almoco": "hora_almoco",
+                       "lanche": "hora_lanche", "jantar": "hora_jantar"}
+
+
 @app.route("/perfil", methods=["GET", "POST"])
 def perfil():
     if request.method == "POST":
@@ -278,7 +287,6 @@ def perfil():
             "altura_cm": float(request.form["altura_cm"]),
             "peso_kg": float(request.form["peso_kg"]),
             "nivel_atividade": request.form["nivel_atividade"],
-            "objetivo": request.form["objetivo"],
             "peso_pretendido": float(request.form["peso_pretendido"]) if request.form.get("peso_pretendido") else None,
             "hora_pequeno_almoco": request.form.get("hora_pequeno_almoco", "08:00"),
             "hora_almoco": request.form.get("hora_almoco", "13:00"),
@@ -286,10 +294,10 @@ def perfil():
             "hora_jantar": request.form.get("hora_jantar", "20:00"),
             "hora_treino": request.form.get("hora_treino", ""),
         }
-        # atualizar_perfil só muda estes campos — as refeições habituais e os
-        # lembretes (editados noutros formulários desta mesma página) não se perdem.
+        # atualizar_perfil só muda estes campos — o objetivo (form à parte),
+        # as refeições habituais e os lembretes não se perdem.
         atualizar_perfil(**data)
-        flash("Perfil atualizado! 🎉", "success")
+        flash("Dados guardados! 🎉", "success")
         return redirect(url_for("perfil"))
 
     profile = db.get_profile() if db.configured() else None
@@ -298,36 +306,60 @@ def perfil():
 
     targets = nc.macro_targets(profile) or {"kcal": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}
 
-    habitos_resumo = {}
     alimentos_custom = db.get_custom_foods() if db.configured() else []
     extra = mi.dict_custom(alimentos_custom)
     peso_unidade = mi.dict_peso_unidade(alimentos_custom)
+
+    refeicoes_habituais = []
     for tipo, campo in HABITO_CAMPO.items():
         texto = (profile.get(campo) or "").strip()
         if not texto:
-            habitos_resumo[tipo] = None
+            continue
+        itens_guardados = mi.descodificar(texto)
+        if itens_guardados is not None:
+            total, itens_calc, _ = mi.calcular_itens(itens_guardados, extra=extra, peso_unidade=peso_unidade)
+            kcal = round(total["kcal"])
+            itens = [{"nome": it["nome"], "quantidade": f'{it["quantidade"]:g} {it["unidade_label"]}'} for it in itens_calc]
         else:
-            itens = mi.resumo_itens(texto, extra=extra, peso_unidade=peso_unidade)
-            habitos_resumo[tipo] = ", ".join(it["nome"] for it in itens) if itens else texto
+            kcal = 0
+            itens = [{"nome": texto, "quantidade": ""}]
+        refeicoes_habituais.append({
+            "tipo": tipo, "hora": profile.get(HORA_CAMPO_POR_TIPO[tipo], ""),
+            "nome": HABITO_LABEL.get(tipo, tipo), "kcal": kcal, "itens": itens,
+        })
+    refeicoes_habituais.sort(key=lambda r: r["hora"] or "99:99")
+
+    minhas_receitas = db.get_custom_recipes() if db.configured() else []
 
     lembretes = []
     for chave, nome in LEMBRETE_TIPOS:
-        hora_campo = {"pequeno_almoco": "hora_pequeno_almoco", "almoco": "hora_almoco",
-                      "lanche": "hora_lanche", "jantar": "hora_jantar"}[chave]
         lembretes.append({
             "chave": chave, "nome": nome,
-            "detalhe": f"Por volta das {profile.get(hora_campo, '')}",
+            "detalhe": f"Por volta das {profile.get(HORA_CAMPO_POR_TIPO[chave], '')}",
             "ativo": not profile.get(f"pular_lembrete_{chave}"),
         })
+
+    objetivos = [{"id": k, "nome": v, "meta": GOAL_META.get(k, "")} for k, v in nc.GOAL_LABELS.items()]
 
     return render_template(
         "perfil.html", ecra="perfil", notificacoes_novas=False, profile=profile,
         objetivo={"kcal": round(targets["kcal"]), "p": round(targets["protein_g"]),
                   "c": round(targets["carbs_g"]), "g": round(targets["fat_g"])},
-        goal_labels=nc.GOAL_LABELS, activity_labels=nc.ACTIVITY_LABELS,
+        activity_labels=nc.ACTIVITY_LABELS,
         perfil={"objetivo": nc.GOAL_LABELS.get(profile.get("objetivo"), "")},
-        habitos_resumo=habitos_resumo, lembretes=lembretes,
+        objetivos=objetivos, objetivo_atual=profile.get("objetivo"),
+        refeicoes_habituais=refeicoes_habituais, minhas_receitas=minhas_receitas,
+        lembretes=lembretes,
     )
+
+
+@app.route("/perfil/objetivo", methods=["POST"])
+def guardar_objetivo():
+    objetivo = request.form.get("objetivo", "")
+    if objetivo in nc.GOAL_LABELS:
+        atualizar_perfil(objetivo=objetivo)
+        flash("Objetivo atualizado! As tuas metas diárias já foram recalculadas.", "success")
+    return redirect(url_for("perfil"))
 
 
 @app.route("/perfil/lembrete", methods=["POST"])
@@ -436,7 +468,8 @@ def registar_refeicao():
                             meal_labels=nc.MEAL_LABELS, resultado=resultado,
                             receitas_sugeridas=receitas_sugeridas,
                             unit_order=mi.UNIT_ORDER, unit_labels=mi.UNIT_LABELS,
-                            datalist_opcoes=mi.opcoes_datalist(alimentos_custom))
+                            datalist_opcoes=mi.opcoes_datalist(alimentos_custom),
+                            hoje_iso=date.today().isoformat())
 
 
 @app.route("/alimentos/pesquisar")
@@ -885,6 +918,39 @@ def duplicar_refeicao():
     if data_iso == date.today().isoformat():
         return redirect(url_for("index"))
     return redirect(url_for("dia", data_iso=data_iso))
+
+
+@app.route("/registar-refeicao/duplicar-de-outro-dia", methods=["POST"])
+def duplicar_de_outro_dia():
+    """Duplica uma refeição de QUALQUER dia passado para uma refeição de
+    hoje. Usado a partir da página 'Registar refeição' (ex: estou a
+    registar o jantar e quero copiar o almoço de terça-feira passada)."""
+    tipo_destino = request.form.get("tipo_destino", "almoco")
+    data_origem = request.form.get("data_origem", "")
+    tipo_origem = request.form.get("tipo_origem", "")
+
+    if not data_origem or tipo_origem not in nc.MEAL_LABELS:
+        flash("Escolhe o dia e a refeição que queres duplicar.", "error")
+        return redirect(url_for("registar_refeicao", tipo=tipo_destino))
+
+    meals = db.get_meals_for_day(data_origem)
+    origem = next((m for m in meals if m["tipo"] == tipo_origem), None)
+
+    if not origem or origem.get("texto_original") == "Não comi nada":
+        flash("Não encontrei essa refeição nesse dia.", "error")
+        return redirect(url_for("registar_refeicao", tipo=tipo_destino))
+
+    hoje_iso = date.today().isoformat()
+    ja_existe = any(m["tipo"] == tipo_destino and m.get("texto_original") != "Não comi nada"
+                    for m in db.get_meals_for_day(hoje_iso))
+    if ja_existe:
+        flash("Já tens essa refeição registada hoje — edita-a se quiseres mudar.", "error")
+        return redirect(url_for("registar_refeicao", tipo=tipo_destino))
+
+    db.add_meal(hoje_iso, tipo_destino, origem["texto_original"],
+                origem["kcal"], origem["proteina_g"], origem["hidratos_g"], origem["gordura_g"])
+    flash("Refeição duplicada! 📋", "success")
+    return redirect(url_for("index"))
 
 
 @app.route("/despensa", methods=["GET", "POST"])
