@@ -13,6 +13,7 @@
       <input type="text" name="nome" placeholder="Adicionar alimento…" autocomplete="off" required>
     </label>
     <input type="text" name="quantidade" placeholder="quantidade (opcional)" style="max-width:140px;flex:1;min-width:120px;" class="input-pill">
+    <input type="text" name="preco" placeholder="preço € (opcional)" style="max-width:140px;flex:1;min-width:120px;" class="input-pill" inputmode="decimal">
     <button class="btn btn-primary" type="submit">Adicionar</button>
   </form>
 
@@ -26,6 +27,24 @@
             {% if f.quantidade %}<span class="muted">{{ f.quantidade }}</span>{% endif %}
             {% if f.preco %}<span class="muted">{{ ' · ' if f.quantidade }}{{ '%.2f'|format(f.preco) }} €</span>{% endif %}
           </span>
+          <details class="pf-add">
+            <summary class="pf-add-btn" aria-label="Editar {{ f.nome }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+            </summary>
+            <div class="pf-add-menu" style="min-width:220px;">
+              <form method="post" action="{{ url_for('editar_despensa', page_id=f.page_id) }}" class="stack" style="gap:8px;">
+                <label class="input-pill">
+                  <span class="sr">Quantidade</span>
+                  <input type="text" name="quantidade" value="{{ f.quantidade or '' }}" placeholder="quantidade (opcional)" autocomplete="off">
+                </label>
+                <label class="input-pill">
+                  <span class="sr">Preço</span>
+                  <input type="text" name="preco" value="{{ '%.2f'|format(f.preco) if f.preco else '' }}" placeholder="preço € (opcional)" inputmode="decimal" autocomplete="off">
+                </label>
+                <button class="btn btn-primary btn-sm" type="submit">Guardar</button>
+              </form>
+            </div>
+          </details>
           <form method="post" action="{{ url_for('remover_despensa', page_id=f.page_id) }}">
             <button class="bell" type="submit" aria-label="Remover {{ f.nome }} da despensa">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>

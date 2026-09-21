@@ -1044,13 +1044,27 @@ def duplicar_de_outro_dia():
     return redirect(url_for("dia", data_iso=data_destino))
 
 
+def _preco_do_formulario(form, campo="preco"):
+    """Lê um preço opcional do formulário (aceita vírgula ou ponto).
+    Devolve None se estiver vazio ou não for um número válido."""
+    bruto = (form.get(campo) or "").strip().replace("€", "").replace(",", ".")
+    if not bruto:
+        return None
+    try:
+        valor = float(bruto)
+    except ValueError:
+        return None
+    return valor if valor > 0 else None
+
+
 @app.route("/despensa", methods=["GET", "POST"])
 def despensa():
     if request.method == "POST":
         nome = request.form.get("nome", "").strip()
         quantidade = request.form.get("quantidade", "").strip()
+        preco = _preco_do_formulario(request.form)
         if nome:
-            db.add_pantry_item(nome, quantidade)
+            db.add_pantry_item(nome, quantidade, preco)
             flash(f"'{nome}' adicionado à despensa.", "success")
         return redirect(url_for("despensa"))
 
@@ -1058,6 +1072,15 @@ def despensa():
     excluidos = db.get_excluidos() if db.configured() else []
     return render_template("despensa.html", ecra="sugestoes", notificacoes_novas=False,
                             alimentos=items, excluidos=excluidos)
+
+
+@app.route("/despensa/<page_id>/editar", methods=["POST"])
+def editar_despensa(page_id):
+    quantidade = request.form.get("quantidade", "").strip()
+    preco = _preco_do_formulario(request.form)
+    db.update_pantry_item(page_id, quantidade, preco)
+    flash("Item atualizado.", "success")
+    return redirect(url_for("despensa"))
 
 
 @app.route("/despensa/remover/<page_id>", methods=["POST"])

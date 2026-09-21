@@ -108,12 +108,21 @@ def get_pantry():
     return _load()["pantry"]
 
 
-def add_pantry_item(nome, quantidade=""):
+def add_pantry_item(nome, quantidade="", preco=None):
     data = _load()
-    item = {"page_id": str(uuid.uuid4()), "nome": nome, "quantidade": quantidade}
+    item = {"page_id": str(uuid.uuid4()), "nome": nome, "quantidade": quantidade, "preco": preco}
     data["pantry"].append(item)
     _save(data)
     return item
+
+
+def update_pantry_item(page_id, quantidade="", preco=None):
+    data = _load()
+    for p in data["pantry"]:
+        if p["page_id"] == page_id:
+            p["quantidade"] = quantidade
+            p["preco"] = preco
+    _save(data)
 
 
 def delete_pantry_item(page_id):
