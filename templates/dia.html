@@ -1,8 +1,8 @@
 {% extends "base_organic.html" %}
 
-{% block titulo %}{{ data_iso }} · NutriApp{% endblock %}
-{% block cabecalho %}📅 {{ dias_semana[dia_ref.weekday()] }}{% endblock %}
-{% block subcabecalho %}{{ data_iso }}{% if is_today %} — hoje{% endif %}{% endblock %}
+{% block titulo %}{{ dia.data_legivel }} · NutriApp{% endblock %}
+{% block cabecalho %}{{ dias_semana[dia_ref.weekday()] }}{% endblock %}
+{% block subcabecalho %}{{ dia.data_legivel }}{% endblock %}
 
 {% block conteudo %}
 
@@ -11,95 +11,39 @@
   <a href="{{ url_for('dia', data_iso=seguinte) }}" class="btn btn-secondary btn-sm grow">Dia seguinte →</a>
 </div>
 
-{% macro pct(v, t) %}{{ [((v / t * 100) if t else 0), 100]|min }}{% endmacro %}
-<div class="card-lg">
-  <span class="section-label">Resumo do dia</span>
-  <div class="macro-grid" style="margin-top:8px;">
-    <div class="macro-box">
-      <div class="value">🔥 {{ totals.kcal|round|int }}</div>
-      <div class="label">/ {{ targets.kcal if targets else '-' }} kcal</div>
-      {% if targets %}<div class="progress-bar"><div style="width:{{ pct(totals.kcal, targets.kcal) }}%;"></div></div>{% endif %}
+{# ===== Mesmo anel de calorias + macros do Início, para o visual ser sempre igual ===== #}
+<div class="today">
+  <div class="ring">
+    <svg viewBox="0 0 124 124" aria-hidden="true">
+      <circle class="track" cx="62" cy="62" r="52"></circle>
+      <circle class="bar" cx="62" cy="62" r="52"
+              stroke-dasharray="326.73"
+              stroke-dashoffset="{{ (326.73 * (1 - dia.pct)) | round(1) }}"></circle>
+    </svg>
+    <div class="val">
+      <strong>{{ dia.kcal }}</strong>
+      <span>de {{ objetivo.kcal }} kcal</span>
     </div>
-    <div class="macro-box">
-      <div class="value">🥩 {{ totals.proteina_g|round|int }}g</div>
-      <div class="label">/ {{ targets.protein_g if targets else '-' }}g proteína</div>
-      {% if targets %}<div class="progress-bar"><div style="width:{{ pct(totals.proteina_g, targets.protein_g) }}%;"></div></div>{% endif %}
-    </div>
-    <div class="macro-box">
-      <div class="value">🍚 {{ totals.hidratos_g|round|int }}g</div>
-      <div class="label">/ {{ targets.carbs_g if targets else '-' }}g hidratos</div>
-      {% if targets %}<div class="progress-bar"><div style="width:{{ pct(totals.hidratos_g, targets.carbs_g) }}%;"></div></div>{% endif %}
-    </div>
-    <div class="macro-box">
-      <div class="value">🥑 {{ totals.gordura_g|round|int }}g</div>
-      <div class="label">/ {{ targets.fat_g if targets else '-' }}g gordura</div>
-      {% if targets %}<div class="progress-bar"><div style="width:{{ pct(totals.gordura_g, targets.fat_g) }}%;"></div></div>{% endif %}
-    </div>
+  </div>
+  <div class="macros">
+    {% for m in dia.macros %}
+      <div>
+        <div class="macro-head">
+          <span>{{ m.nome }}</span>
+          <span>{{ m.valor }}/{{ m.meta }} g</span>
+        </div>
+        <div class="meter {{ m.classe }}">
+          <i style="width: {{ m.pct }}%"></i>
+        </div>
+      </div>
+    {% endfor %}
   </div>
 </div>
 
-<div class="stack">
-  <span class="section-label accent">🍽️ Refeições</span>
-  {% for tipo, info in meal_labels.items() %}
-    {% set meal = meals_by_type[tipo] %}
-    <div class="card-lg">
-      <div class="row">
-        <span style="font-size:16px;">{{ '✅' if meal else '⚪' }}</span>
-        <span class="grow">
-          <span style="font-size:14px;font-weight:700;">{{ info[0] }} {{ info[1] }}</span><br>
-          {% if meal and meal.texto_original != 'Não comi nada' %}
-            {% if meal.itens %}
-              <span class="muted">{% for it in meal.itens %}{{ it.nome }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
-            {% elif not ('|' in (meal.texto_original or '')) %}
-              <span class="muted">{{ meal.texto_original }}</span>
-            {% endif %}
-          {% endif %}
-        </span>
-        {% if meal %}
-          <span class="kicker" style="font-family:var(--f-head);font-size:14px;color:var(--a700);text-transform:none;letter-spacing:0;">
-            {% if meal.texto_original == 'Não comi nada' %}não comeste{% else %}{{ meal.kcal|round|int }} kcal{% endif %}
-          </span>
-        {% else %}
-          <span class="muted">sem registo</span>
-        {% endif %}
-      </div>
+{# ===== Refeições: mesmo cartão bonito usado no Início ===== #}
+{% set dia_iso_atual = data_iso %}
+{% include "_meals_organic.html" %}
 
-      {% if meal and meal.itens %}
-        <ul class="item-list" style="margin-top:8px;">
-          {% for it in meal.itens %}
-            <li>
-              <span>{{ it.quantidade }} {{ it.unidade_label }} de {{ it.nome }} <span class="tag">{{ it.gramas }}g</span></span>
-              <span>{{ it.kcal|round|int }} kcal</span>
-            </li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-
-      <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px;">
-        {% if meal %}
-          <a class="btn btn-secondary btn-sm" href="{{ url_for('editar_refeicao', page_id=meal.page_id, voltar=data_iso) }}">Editar</a>
-        {% else %}
-          <a class="btn btn-primary btn-sm" href="{{ url_for('registar_refeicao', tipo=tipo) }}">Registar</a>
-          {% if refeicoes_duplicaveis %}
-            <form method="post" action="{{ url_for('duplicar_refeicao') }}" class="row" style="gap:6px;flex-wrap:wrap;">
-              <input type="hidden" name="tipo_destino" value="{{ tipo }}">
-              <input type="hidden" name="data" value="{{ data_iso }}">
-              <select name="tipo_origem" style="font-size:12px;border-radius:8px;padding:8px;border:1px solid var(--divider);background:var(--surface);">
-                {% for t2 in refeicoes_duplicaveis %}
-                  <option value="{{ t2 }}">{{ meal_labels[t2][0] }} {{ meal_labels[t2][1] }}</option>
-                {% endfor %}
-              </select>
-              <button type="submit" class="btn btn-secondary btn-sm">📋 Duplicar</button>
-            </form>
-          {% endif %}
-        {% endif %}
-      </div>
-    </div>
-  {% endfor %}
-</div>
-
-{% if not is_today %}
-  <a href="{{ url_for('index') }}" class="btn btn-secondary btn-block">← Voltar a hoje</a>
-{% endif %}
+<a href="{{ url_for('index') }}" class="btn btn-secondary btn-block">← Voltar a hoje</a>
 
 {% endblock %}

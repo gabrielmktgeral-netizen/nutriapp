@@ -269,6 +269,8 @@ def get_pantry():
         "page_id": p["id"],
         "nome": _prop(p, "Nome", "title"),
         "quantidade": _prop(p, "Quantidade", "text"),
+        "preco": _prop(p, "Preço", "number"),
+        "loja": _prop(p, "Loja", "text"),
     } for p in results]
     _cache_set("pantry", itens)
     return itens

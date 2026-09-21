@@ -24,6 +24,7 @@
           <span class="grow">
             <span class="name">{{ f.nome }}</span><br>
             {% if f.quantidade %}<span class="muted">{{ f.quantidade }}</span>{% endif %}
+            {% if f.preco %}<span class="muted">{{ ' · ' if f.quantidade }}{{ '%.2f'|format(f.preco) }} €</span>{% endif %}
           </span>
           <form method="post" action="{{ url_for('remover_despensa', page_id=f.page_id) }}">
             <button class="bell" type="submit" aria-label="Remover {{ f.nome }} da despensa">

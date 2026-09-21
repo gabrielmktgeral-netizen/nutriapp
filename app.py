@@ -88,6 +88,54 @@ def dias_rapidos_duplicar(today):
     ]
 
 
+def data_valida(valor, default=None):
+    """Confirma que `valor` é uma data YYYY-MM-DD válida; caso contrário
+    devolve `default` (hoje, por omissão). Usa-se sempre que uma data vem
+    de fora (query string / formulário) antes de guardar seja o que for —
+    é o que evita o bug de registar sempre no dia de hoje por engano."""
+    if default is None:
+        default = date.today().isoformat()
+    if not valor:
+        return default
+    try:
+        date.fromisoformat(valor)
+        return valor
+    except ValueError:
+        return default
+
+
+def _construir_refeicoes_organic(meals_by_type, habitos, refeicoes_duplicaveis, data_destino, voltar, extra, peso_unidade):
+    """Monta a lista de refeições no formato usado pelos cartões bonitos
+    (ícones, itens, ações) — partilhado entre o Início (hoje) e a página
+    de um dia específico, para os dois terem sempre o mesmo visual.
+
+    `data_destino` é o dia para onde qualquer ação aqui (registar, não
+    comi, habitual) vai gravar. `voltar` é só para onde o botão Editar
+    volta depois de guardar ("index" ou a data ISO de outro dia)."""
+    refeicoes_organic = []
+    for tipo in ["pequeno_almoco", "almoco", "lanche", "jantar"]:
+        meal = meals_by_type[tipo]
+        label = nc.MEAL_LABELS[tipo][1]
+        saltada = bool(meal) and meal.get("texto_original") == "Não comi nada"
+        itens = mi.resumo_itens(meal.get("texto_original"), extra=extra, peso_unidade=peso_unidade) if meal and not saltada else None
+        origens = [(t2, f"{nc.MEAL_LABELS[t2][0]} {nc.MEAL_LABELS[t2][1]}") for t2 in refeicoes_duplicaveis]
+        refeicoes_organic.append({
+            "tipo": label, "tipo_slug": tipo, "icone": ICONES_ORGANIC[tipo],
+            "itens": [{"nome": it["nome"], "kcal": round(it["kcal"])} for it in itens] if itens else [],
+            "registada": bool(meal), "saltada": saltada,
+            "kcal": round(meal["kcal"]) if meal else 0,
+            "p": round(meal["proteina_g"]) if meal else 0,
+            "c": round(meal["hidratos_g"]) if meal else 0,
+            "g": round(meal["gordura_g"]) if meal else 0,
+            "editar_href": url_for("editar_refeicao", page_id=meal["page_id"], voltar=voltar) if meal else "",
+            "registar_href": url_for("registar_refeicao", tipo=tipo, data=data_destino),
+            "nao_comi_href": url_for("nao_comi", tipo=tipo, data=data_destino),
+            "habitual_href": url_for("registar_habitual", tipo=tipo, data=data_destino) if (not meal and habitos.get(tipo)) else None,
+            "duplicar_origens": origens if not meal else None,
+        })
+    return refeicoes_organic
+
+
 def gerar_nota_periodica(targets, meals_ultimos_3_dias, excluidos_nomes=None):
     """De 3 em 3 dias: analisa a média de proteína consumida e, se estiver
     abaixo do objetivo, devolve uma nota com sugestões de receitas ricas
@@ -197,27 +245,10 @@ def index():
     extra_hoje = mi.dict_custom(alimentos_custom_hoje)
     peso_unidade_hoje = mi.dict_peso_unidade(alimentos_custom_hoje)
 
-    refeicoes_organic = []
-    for tipo in ["pequeno_almoco", "almoco", "lanche", "jantar"]:
-        meal = meals_by_type[tipo]
-        label = nc.MEAL_LABELS[tipo][1]
-        saltada = bool(meal) and meal.get("texto_original") == "Não comi nada"
-        itens = mi.resumo_itens(meal.get("texto_original"), extra=extra_hoje, peso_unidade=peso_unidade_hoje) if meal and not saltada else None
-        origens = [(t2, f"{nc.MEAL_LABELS[t2][0]} {nc.MEAL_LABELS[t2][1]}") for t2 in refeicoes_duplicaveis]
-        refeicoes_organic.append({
-            "tipo": label, "tipo_slug": tipo, "icone": ICONES_ORGANIC[tipo],
-            "itens": [{"nome": it["nome"], "kcal": round(it["kcal"])} for it in itens] if itens else [],
-            "registada": bool(meal), "saltada": saltada,
-            "kcal": round(meal["kcal"]) if meal else 0,
-            "p": round(meal["proteina_g"]) if meal else 0,
-            "c": round(meal["hidratos_g"]) if meal else 0,
-            "g": round(meal["gordura_g"]) if meal else 0,
-            "editar_href": url_for("editar_refeicao", page_id=meal["page_id"], voltar="index") if meal else "",
-            "registar_href": url_for("registar_refeicao", tipo=tipo),
-            "nao_comi_href": url_for("nao_comi", tipo=tipo),
-            "habitual_href": url_for("registar_habitual", tipo=tipo) if (not meal and habitos.get(tipo)) else None,
-            "duplicar_origens": origens if not meal else None,
-        })
+    refeicoes_organic = _construir_refeicoes_organic(
+        meals_by_type, habitos, refeicoes_duplicaveis,
+        data_destino=today_iso, voltar="index", extra=extra_hoje, peso_unidade=peso_unidade_hoje,
+    )
 
     dia_semana_abbr = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][today.weekday()]
     mes_abbr = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][today.month - 1]
@@ -437,18 +468,21 @@ def onboarding():
 @app.route("/registar-refeicao", methods=["GET", "POST"])
 def registar_refeicao():
     tipo_padrao = request.args.get("tipo", "almoco")
+    hoje_iso = date.today().isoformat()
+    data_destino = data_valida(request.values.get("data"), default=hoje_iso)
     resultado = None
     alimentos_custom = db.get_custom_foods() if db.configured() else []
     extra = mi.dict_custom(alimentos_custom)
     peso_unidade = mi.dict_peso_unidade(alimentos_custom)
     if request.method == "POST":
         tipo = request.form["tipo"]
+        data_destino = data_valida(request.form.get("data"), default=hoje_iso)
         itens_form = mi.itens_do_formulario(request.form)
         if itens_form:
             total, itens, nao_reconhecidos = mi.calcular_itens(itens_form, extra=extra, peso_unidade=peso_unidade)
             if itens:
                 texto_canonico = mi.codificar([it for it in itens_form if it["chave"] not in nao_reconhecidos])
-                db.add_meal(date.today().isoformat(), tipo, texto_canonico,
+                db.add_meal(data_destino, tipo, texto_canonico,
                             total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
                 resultado = {"total": total, "itens": itens}
                 flash("Refeição registada! ✅", "success")
@@ -463,10 +497,9 @@ def registar_refeicao():
     if db.configured():
         profile = db.get_profile()
         targets = nc.macro_targets(profile) if profile else None
-        today_iso = date.today().isoformat()
-        meals_today = db.get_meals_for_day(today_iso)
-        consumido_kcal = sum(m["kcal"] for m in meals_today)
-        consumido_prot = sum(m["proteina_g"] for m in meals_today)
+        meals_dia = db.get_meals_for_day(data_destino)
+        consumido_kcal = sum(m["kcal"] for m in meals_dia)
+        consumido_prot = sum(m["proteina_g"] for m in meals_dia)
         restante_kcal = round((targets["kcal"] if targets else 0) - consumido_kcal)
         restante_prot = round((targets["protein_g"] if targets else 0) - consumido_prot)
         pantry_nomes = [p["nome"] for p in db.get_pantry()]
@@ -482,7 +515,8 @@ def registar_refeicao():
                             receitas_sugeridas=receitas_sugeridas,
                             unit_order=mi.UNIT_ORDER, unit_labels=mi.UNIT_LABELS,
                             datalist_opcoes=mi.opcoes_datalist(alimentos_custom),
-                            hoje_iso=date.today().isoformat())
+                            hoje_iso=hoje_iso, data_destino=data_destino,
+                            voltar_href=(url_for("index") if data_destino == hoje_iso else url_for("dia", data_iso=data_destino)))
 
 
 @app.route("/alimentos/pesquisar")
@@ -604,20 +638,23 @@ def remover_personalizacao_alimento(page_id):
 def registar_refeicao_receita():
     tipo = request.form.get("tipo", "almoco")
     nome_receita = request.form.get("nome_receita", "").strip()
+    data_destino = data_valida(request.form.get("data"))
     if not nome_receita:
         flash("Escolhe uma receita da lista.", "error")
-        return redirect(url_for("registar_refeicao", tipo=tipo))
+        return redirect(url_for("registar_refeicao", tipo=tipo, data=data_destino))
 
     minhas_receitas = db.get_custom_recipes() if db.configured() else []
     receita = find_recipe_by_name(nome_receita, receitas_extra=minhas_receitas)
     if not receita:
         flash("Não encontrei essa receita.", "error")
-        return redirect(url_for("registar_refeicao", tipo=tipo))
+        return redirect(url_for("registar_refeicao", tipo=tipo, data=data_destino))
 
-    db.add_meal(date.today().isoformat(), tipo, receita["nome"],
+    db.add_meal(data_destino, tipo, receita["nome"],
                 receita["kcal"], receita["proteina_g"], receita["hidratos_g"], receita["gordura_g"])
     flash(f"'{receita['nome']}' registada! ✅", "success")
-    return redirect(url_for("index"))
+    if data_destino == date.today().isoformat():
+        return redirect(url_for("index"))
+    return redirect(url_for("dia", data_iso=data_destino))
 
 
 @app.route("/refeicao/<page_id>/editar", methods=["GET", "POST"])
@@ -672,9 +709,12 @@ def remover_refeicao(page_id):
 
 @app.route("/nao-comi/<tipo>", methods=["POST"])
 def nao_comi(tipo):
-    db.add_meal(date.today().isoformat(), tipo, "Não comi nada", 0, 0, 0, 0)
+    data_destino = data_valida(request.args.get("data") or request.form.get("data"))
+    db.add_meal(data_destino, tipo, "Não comi nada", 0, 0, 0, 0)
     flash("Registado — sem problema, fica marcado.", "success")
-    return redirect(url_for("index"))
+    if data_destino == date.today().isoformat():
+        return redirect(url_for("index"))
+    return redirect(url_for("dia", data_iso=data_destino))
 
 
 @app.route("/receitas", methods=["GET", "POST"])
@@ -817,13 +857,16 @@ def notificacoes_teste():
 
 @app.route("/registar-habitual/<tipo>", methods=["POST"])
 def registar_habitual(tipo):
+    data_destino = data_valida(request.args.get("data") or request.form.get("data"))
+    voltar_href = url_for("index") if data_destino == date.today().isoformat() else url_for("dia", data_iso=data_destino)
+
     profile = db.get_profile()
     campo = HABITO_CAMPO.get(tipo)
     texto = (profile.get(campo) if profile and campo else "") or ""
     texto = texto.strip()
     if not texto:
         flash("Ainda não configuraste esta refeição habitual no Perfil.", "error")
-        return redirect(url_for("index"))
+        return redirect(voltar_href)
 
     alimentos_custom = db.get_custom_foods() if db.configured() else []
     extra = mi.dict_custom(alimentos_custom)
@@ -835,10 +878,10 @@ def registar_habitual(tipo):
         # formato antigo (texto livre escrito antes desta alteração)
         total, itens = parse_meal_text(texto)
 
-    db.add_meal(date.today().isoformat(), tipo, texto,
+    db.add_meal(data_destino, tipo, texto,
                 total["kcal"], total["proteina_g"], total["hidratos_g"], total["gordura_g"])
     flash("Refeição habitual registada! ⚡", "success")
-    return redirect(url_for("index"))
+    return redirect(voltar_href)
 
 
 @app.route("/perfil/habitual/<tipo>", methods=["GET", "POST"])
@@ -878,6 +921,13 @@ def dia(data_iso):
     except ValueError:
         return redirect(url_for("index"))
 
+    today = date.today()
+    today_iso = today.isoformat()
+    if data_iso == today_iso:
+        # o dia de hoje já tem a sua própria página (Início) — evita ter
+        # o mesmo conteúdo duplicado em dois sítios
+        return redirect(url_for("index"))
+
     profile = db.get_profile()
     meals = db.get_meals_for_day(data_iso)
     totals = {"kcal": 0, "proteina_g": 0, "hidratos_g": 0, "gordura_g": 0}
@@ -887,26 +937,50 @@ def dia(data_iso):
         totals["hidratos_g"] += m["hidratos_g"]
         totals["gordura_g"] += m["gordura_g"]
 
-    targets = nc.macro_targets(profile) if profile else None
+    targets = nc.macro_targets(profile) if profile else {"kcal": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}
     alimentos_custom_dia = db.get_custom_foods() if db.configured() else []
     extra = mi.dict_custom(alimentos_custom_dia)
     peso_unidade = mi.dict_peso_unidade(alimentos_custom_dia)
-    for m in meals:
-        m["itens"] = mi.resumo_itens(m.get("texto_original"), extra=extra, peso_unidade=peso_unidade)
     meals_by_type = {"pequeno_almoco": None, "almoco": None, "lanche": None, "jantar": None}
     for m in meals:
         meals_by_type[m["tipo"]] = m
 
-    today_iso = date.today().isoformat()
     anterior = (dia_ref - timedelta(days=1)).isoformat()
     seguinte = (dia_ref + timedelta(days=1)).isoformat()
     refeicoes_duplicaveis = [t for t, m in meals_by_type.items() if m and m.get("texto_original") != "Não comi nada"]
+    habitos = {tipo: (profile.get(campo) or "").strip() for tipo, campo in HABITO_CAMPO.items()} if profile else {}
+
+    # ---------- mesmos dados/visual que o Início (cartões de refeição, anel de calorias) ----------
+    refeicoes_organic = _construir_refeicoes_organic(
+        meals_by_type, habitos, refeicoes_duplicaveis,
+        data_destino=data_iso, voltar=data_iso, extra=extra, peso_unidade=peso_unidade,
+    )
+
+    dia_semana_abbr = DIA_SEMANA_ABBR[dia_ref.weekday()]
+    mes_abbr = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][dia_ref.month - 1]
+    dia_organic = {
+        "data_legivel": f"{dia_semana_abbr}, {dia_ref.day} {mes_abbr}",
+        "kcal": f"{round(totals['kcal']):,}".replace(",", " "),
+        "pct": min(1.0, (totals["kcal"] / targets["kcal"]) if targets["kcal"] else 0),
+        "refeicoes": refeicoes_organic,
+        "macros": [
+            {"nome": "Proteína", "valor": round(totals["proteina_g"]), "meta": round(targets["protein_g"]),
+             "pct": min(100, round(totals["proteina_g"] / targets["protein_g"] * 100)) if targets["protein_g"] else 0, "classe": ""},
+            {"nome": "Hidratos", "valor": round(totals["hidratos_g"]), "meta": round(targets["carbs_g"]),
+             "pct": min(100, round(totals["hidratos_g"] / targets["carbs_g"] * 100)) if targets["carbs_g"] else 0, "classe": "m-carb"},
+            {"nome": "Gordura", "valor": round(totals["gordura_g"]), "meta": round(targets["fat_g"]),
+             "pct": min(100, round(totals["gordura_g"] / targets["fat_g"] * 100)) if targets["fat_g"] else 0, "classe": "m-fat"},
+        ],
+    }
+
+    objetivo = {"kcal": round(targets["kcal"]), "p": round(targets["protein_g"]),
+                "c": round(targets["carbs_g"]), "g": round(targets["fat_g"])}
 
     return render_template(
-        "dia.html", data_iso=data_iso, dia_ref=dia_ref, meals_by_type=meals_by_type,
-        meal_labels=nc.MEAL_LABELS, totals=totals, targets=targets,
-        is_today=(data_iso == today_iso), anterior=anterior, seguinte=seguinte,
-        dias_semana=DIAS_SEMANA, refeicoes_duplicaveis=refeicoes_duplicaveis,
+        "dia.html", data_iso=data_iso, dia_ref=dia_ref, meal_labels=nc.MEAL_LABELS,
+        is_today=False, anterior=anterior, seguinte=seguinte, today=today_iso,
+        dias_semana=DIAS_SEMANA, dia=dia_organic, objetivo=objetivo,
+        dias_rapidos_duplicar=dias_rapidos_duplicar(today),
     )
 
 
@@ -936,34 +1010,38 @@ def duplicar_refeicao():
 @app.route("/registar-refeicao/duplicar-de-outro-dia", methods=["POST"])
 def duplicar_de_outro_dia():
     """Duplica uma refeição de QUALQUER dia passado para uma refeição de
-    hoje. Usado a partir da página 'Registar refeição' (ex: estou a
-    registar o jantar e quero copiar o almoço de terça-feira passada)."""
+    outro dia (por omissão hoje). Usado a partir do cartão de uma
+    refeição por registar, tanto no Início como na página de um dia
+    específico (ex: estou a registar o jantar de dia 18 e quero copiar
+    o almoço de terça-feira passada)."""
     tipo_destino = request.form.get("tipo_destino", "almoco")
     data_origem = request.form.get("data_origem", "")
     tipo_origem = request.form.get("tipo_origem", "")
+    data_destino = data_valida(request.form.get("data_destino"))
 
     if not data_origem or tipo_origem not in nc.MEAL_LABELS:
         flash("Escolhe o dia e a refeição que queres duplicar.", "error")
-        return redirect(url_for("registar_refeicao", tipo=tipo_destino))
+        return redirect(url_for("registar_refeicao", tipo=tipo_destino, data=data_destino))
 
     meals = db.get_meals_for_day(data_origem)
     origem = next((m for m in meals if m["tipo"] == tipo_origem), None)
 
     if not origem or origem.get("texto_original") == "Não comi nada":
         flash("Não encontrei essa refeição nesse dia.", "error")
-        return redirect(url_for("registar_refeicao", tipo=tipo_destino))
+        return redirect(url_for("registar_refeicao", tipo=tipo_destino, data=data_destino))
 
-    hoje_iso = date.today().isoformat()
     ja_existe = any(m["tipo"] == tipo_destino and m.get("texto_original") != "Não comi nada"
-                    for m in db.get_meals_for_day(hoje_iso))
+                    for m in db.get_meals_for_day(data_destino))
     if ja_existe:
-        flash("Já tens essa refeição registada hoje — edita-a se quiseres mudar.", "error")
-        return redirect(url_for("registar_refeicao", tipo=tipo_destino))
+        flash("Já tens essa refeição registada nesse dia — edita-a se quiseres mudar.", "error")
+        return redirect(url_for("registar_refeicao", tipo=tipo_destino, data=data_destino))
 
-    db.add_meal(hoje_iso, tipo_destino, origem["texto_original"],
+    db.add_meal(data_destino, tipo_destino, origem["texto_original"],
                 origem["kcal"], origem["proteina_g"], origem["hidratos_g"], origem["gordura_g"])
     flash("Refeição duplicada! 📋", "success")
-    return redirect(url_for("index"))
+    if data_destino == date.today().isoformat():
+        return redirect(url_for("index"))
+    return redirect(url_for("dia", data_iso=data_destino))
 
 
 @app.route("/despensa", methods=["GET", "POST"])

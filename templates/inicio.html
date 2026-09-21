@@ -61,90 +61,9 @@
     </div>
   </div>
 
-  {# ===== Refeições: <details> nativo, abre ao clicar ===== #}
-  <div class="meals-block stack">
-    <div class="meals">
-      {% for r in dia.refeicoes %}
-        <details class="meal" {% if r.tipo_slug == abrir %}open{% endif %}>
-          <summary>
-            <span class="ico{% if not r.registada %} is-empty{% endif %}">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icone }}"></path></svg>
-            </span>
-            <span class="grow">
-              <span class="name">{{ r.tipo }}</span><br>
-              <span class="muted">
-                {% if r.saltada %}
-                  Não comeste esta refeição
-                {% elif r.itens %}
-                  {{ r.itens | length }} {{ 'alimento' if r.itens | length == 1 else 'alimentos' }}
-                {% else %}
-                  Ainda não registaste
-                {% endif %}
-              </span>
-            </span>
-            <span class="kcal">{% if r.saltada %}não comeste{% elif r.registada %}{{ r.kcal }} kcal{% else %}—{% endif %}</span>
-            <span class="chev">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-            </span>
-          </summary>
-          <div class="body">
-            {% for i in r.itens %}
-              <div class="item">{{ i.nome }}<span>{{ i.kcal }} kcal</span></div>
-            {% endfor %}
-            <div class="acts">
-              {% if r.registada %}
-                {% if not r.saltada %}
-                  <span class="pill pill-plain">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
-                {% endif %}
-                <a class="btn btn-ghost btn-sm" href="{{ r.editar_href }}">Editar</a>
-              {% else %}
-                <a class="btn btn-primary btn-sm" href="{{ r.registar_href }}">Registar agora</a>
-                <form method="post" action="{{ r.nao_comi_href }}">
-                  <button class="btn btn-secondary btn-sm" type="submit">Não comi</button>
-                </form>
-                {% if r.habitual_href %}
-                  <form method="post" action="{{ r.habitual_href }}">
-                    <button class="btn btn-secondary btn-sm" type="submit">⚡ Habitual</button>
-                  </form>
-                {% endif %}
-                <details class="pf-add">
-                  <summary class="btn btn-secondary btn-sm" style="list-style:none;cursor:pointer;">📋 Duplicar</summary>
-                  <div class="pf-add-menu" style="min-width:230px;">
-                    <form method="post" action="{{ url_for('duplicar_de_outro_dia') }}" class="stack dup-form" style="gap:8px;" onsubmit="return dupValidar(this)">
-                      <input type="hidden" name="tipo_destino" value="{{ r.tipo_slug }}">
-                      <input type="hidden" name="data_origem" class="dup-data">
-                      <div class="field" style="gap:4px;">
-                        <label style="font-size:11px;">De que dia?</label>
-                        <div class="dup-dias">
-                          {% for qd in dias_rapidos_duplicar %}
-                            <button type="button" class="dup-dia-btn" data-data="{{ qd.data }}" onclick="dupEscolherDia(this)">{{ qd.label }}</button>
-                          {% endfor %}
-                          <details class="dup-mais">
-                            <summary class="dup-dia-btn dup-mais-btn">Mais antiga…</summary>
-                            <input type="date" class="dup-data-antiga" max="{{ dias_rapidos_duplicar[-1].data if dias_rapidos_duplicar else today }}" onchange="dupEscolherDataAntiga(this)" style="margin-top:6px;font-size:13px;width:100%;">
-                          </details>
-                        </div>
-                        <span class="dup-erro" style="display:none;color:var(--a800);font-size:11px;">Escolhe o dia.</span>
-                      </div>
-                      <div class="field" style="gap:4px;">
-                        <label style="font-size:11px;">Qual refeição desse dia?</label>
-                        <select name="tipo_origem" required style="font-size:13px;">
-                          {% for key, info in meal_labels.items() %}
-                            <option value="{{ key }}">{{ info[0] }} {{ info[1] }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                      <button class="btn btn-primary btn-sm" type="submit">Duplicar</button>
-                    </form>
-                  </div>
-                </details>
-              {% endif %}
-            </div>
-          </div>
-        </details>
-      {% endfor %}
-    </div>
-  </div>
+  {# ===== Refeições: mesmo cartão bonito usado também na página de um dia específico ===== #}
+  {% set dia_iso_atual = today %}
+  {% include "_meals_organic.html" %}
 
   {# ===== Semana ===== #}
   <div class="week-block stack">
@@ -182,31 +101,4 @@
     </a>
   </div>
 
-{% endblock %}
-
-{% block scripts %}
-<script>
-  function dupEscolherDia(btn) {
-    var form = btn.closest('form');
-    form.querySelectorAll('.dup-dia-btn').forEach(function (b) { b.classList.remove('active'); });
-    btn.classList.add('active');
-    form.querySelector('.dup-data').value = btn.dataset.data;
-    form.querySelector('.dup-erro').style.display = 'none';
-    var antiga = form.querySelector('.dup-data-antiga');
-    if (antiga) antiga.value = '';
-  }
-  function dupEscolherDataAntiga(input) {
-    var form = input.closest('form');
-    form.querySelectorAll('.dup-dia-btn').forEach(function (b) { b.classList.remove('active'); });
-    form.querySelector('.dup-data').value = input.value;
-    form.querySelector('.dup-erro').style.display = 'none';
-  }
-  function dupValidar(form) {
-    if (!form.querySelector('.dup-data').value) {
-      form.querySelector('.dup-erro').style.display = 'block';
-      return false;
-    }
-    return true;
-  }
-</script>
 {% endblock %}

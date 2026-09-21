@@ -6,6 +6,38 @@
 
 {% block conteudo %}
 
+<div class="card-lg" style="margin-bottom:14px;">
+  <button type="button" class="btn btn-primary btn-block" onclick="document.getElementById('form-novo-alimento-gerir').classList.toggle('hidden-form')">
+    ➕ Criar novo alimento
+  </button>
+  <form method="post" action="{{ url_for('criar_alimento') }}" id="form-novo-alimento-gerir" class="hidden-form stack" style="margin-top:12px;">
+    <input type="hidden" name="next" value="{{ url_for('gerir_alimentos') }}">
+    <div class="field">
+      <label>Nome do alimento</label>
+      <input type="text" name="nome" placeholder="Ex: Barrita proteica X" required>
+    </div>
+    <div class="row">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="preencherAutomatico(this)">🔍 Preencher automaticamente</button>
+      <span class="preencher-estado"></span>
+    </div>
+    <p class="subtitle" style="margin-top:6px;">Valores por 100g:</p>
+    <div class="macro-grid">
+      <div class="field"><label>🔥 Kcal</label><input type="number" name="kcal" step="0.1" min="0" required></div>
+      <div class="field"><label>🥩 Proteína (g)</label><input type="number" name="proteina" step="0.1" min="0" required></div>
+      <div class="field"><label>🍚 Hidratos (g)</label><input type="number" name="hidratos" step="0.1" min="0" required></div>
+      <div class="field"><label>🥑 Gordura (g)</label><input type="number" name="gordura" step="0.1" min="0" required></div>
+    </div>
+    <div class="field">
+      <label>⚖️ Peso de 1 unidade (g) — opcional</label>
+      <input type="number" name="peso_unidade" step="1" min="0" placeholder="ex: 1 bolacha = 11g">
+      <p class="subtitle" style="margin-top:4px;">
+        Só precisas disto se registas por "unidade" (ex: 1 bolacha). Sem isto, assume 100g por unidade.
+      </p>
+    </div>
+    <button class="btn btn-primary btn-block" type="submit">Guardar alimento</button>
+  </form>
+</div>
+
 <div class="stack">
   {% for a in alimentos %}
     <div class="card-lg">

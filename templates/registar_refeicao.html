@@ -7,9 +7,14 @@
 
 {% block conteudo %}
 
+{% if data_destino != hoje_iso %}
+  <div class="pill pill-accent" style="margin-bottom:12px;">📅 A registar para {{ data_destino }} (não é hoje)</div>
+{% endif %}
+
 {% include "_datalist_alimentos.html" %}
 
 <form method="post" class="card-lg stack">
+  <input type="hidden" name="data" value="{{ data_destino }}">
   <div class="field">
     <label>Refeição</label>
     <select name="tipo">
@@ -32,27 +37,7 @@
 
 {% include "_criar_alimento.html" %}
 
-<details class="card-lg" style="margin-top:14px;">
-  <summary style="cursor:pointer;font-family:var(--f-head);font-weight:700;font-size:14px;">📋 Duplicar de outro dia</summary>
-  <form method="post" action="{{ url_for('duplicar_de_outro_dia') }}" class="stack" style="margin-top:12px;">
-    <div class="field">
-      <label>De que dia?</label>
-      <input type="date" name="data_origem" max="{{ hoje_iso }}" required>
-    </div>
-    <div class="field">
-      <label>Qual refeição desse dia?</label>
-      <select name="tipo_origem" required>
-        {% for key, info in meal_labels.items() %}
-          <option value="{{ key }}">{{ info[0] }} {{ info[1] }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <input type="hidden" name="tipo_destino" value="{{ tipo_padrao }}">
-    <button type="submit" class="btn btn-secondary btn-block">Duplicar para {{ meal_labels[tipo_padrao][1].lower() }} de hoje</button>
-  </form>
-</details>
-
-<form method="post" action="{{ url_for('nao_comi', tipo=tipo_padrao) }}">
+<form method="post" action="{{ url_for('nao_comi', tipo=tipo_padrao, data=data_destino) }}">
   <button type="submit" class="btn btn-secondary btn-block">Não comi nada nesta refeição</button>
 </form>
 
@@ -67,6 +52,7 @@
     </select>
   </div>
   <input type="hidden" name="tipo" value="{{ tipo_padrao }}">
+  <input type="hidden" name="data" value="{{ data_destino }}">
   <button type="submit" class="btn btn-secondary btn-block">Registar esta receita</button>
 </form>
 {% endif %}
@@ -94,6 +80,7 @@
     {% endfor %}
   </ul>
 </div>
+<a href="{{ voltar_href }}" class="btn btn-secondary btn-block" style="margin-top:10px;">← Voltar</a>
 {% endif %}
 
 {% endblock %}

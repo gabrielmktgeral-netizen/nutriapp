@@ -198,6 +198,7 @@ button { font-family: var(--f-body); }
 
 .row { display: flex; align-items: center; gap: 10px; }
 .stack { display: flex; flex-direction: column; gap: 10px; }
+.pf-stack { display: flex; flex-direction: column; gap: 8px; }
 .grow { flex: 1; min-width: 0; }
 .muted { font-size: 11px; color: var(--n700); }
 .num { font-family: var(--f-head); }
