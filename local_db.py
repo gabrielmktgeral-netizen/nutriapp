@@ -116,12 +116,14 @@ def add_pantry_item(nome, quantidade="", preco=None):
     return item
 
 
-def update_pantry_item(page_id, quantidade="", preco=None):
+def update_pantry_item(page_id, quantidade="", preco=None, nome=None):
     data = _load()
     for p in data["pantry"]:
         if p["page_id"] == page_id:
             p["quantidade"] = quantidade
             p["preco"] = preco
+            if nome:
+                p["nome"] = nome
     _save(data)
 
 

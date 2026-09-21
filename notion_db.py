@@ -287,11 +287,13 @@ def add_pantry_item(nome, quantidade="", preco=None):
     return _create_page(DS_DESPENSA, properties)
 
 
-def update_pantry_item(page_id, quantidade="", preco=None):
+def update_pantry_item(page_id, quantidade="", preco=None, nome=None):
     properties = {
         "Quantidade": {"rich_text": [{"text": {"content": quantidade}}]},
         "Preço": {"number": round(float(preco), 2) if isinstance(preco, (int, float)) and preco > 0 else None},
     }
+    if nome:
+        properties["Nome"] = {"title": [{"text": {"content": nome}}]}
     _cache_clear("pantry")
     return _update_page(page_id, properties)
 

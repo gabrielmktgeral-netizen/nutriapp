@@ -34,6 +34,10 @@
             <div class="pf-add-menu" style="min-width:220px;">
               <form method="post" action="{{ url_for('editar_despensa', page_id=f.page_id) }}" class="stack" style="gap:8px;">
                 <label class="input-pill">
+                  <span class="sr">Nome</span>
+                  <input type="text" name="nome" value="{{ f.nome or '' }}" placeholder="nome" autocomplete="off" required>
+                </label>
+                <label class="input-pill">
                   <span class="sr">Quantidade</span>
                   <input type="text" name="quantidade" value="{{ f.quantidade or '' }}" placeholder="quantidade (opcional)" autocomplete="off">
                 </label>

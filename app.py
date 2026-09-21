@@ -1076,9 +1076,10 @@ def despensa():
 
 @app.route("/despensa/<page_id>/editar", methods=["POST"])
 def editar_despensa(page_id):
+    nome = request.form.get("nome", "").strip()
     quantidade = request.form.get("quantidade", "").strip()
     preco = _preco_do_formulario(request.form)
-    db.update_pantry_item(page_id, quantidade, preco)
+    db.update_pantry_item(page_id, quantidade, preco, nome=nome or None)
     flash("Item atualizado.", "success")
     return redirect(url_for("despensa"))
 
