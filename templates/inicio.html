@@ -78,20 +78,8 @@
     </div>
   </div>
 
-  {% if nota_nutricional %}
-    <div class="week-block stack">
-      <span class="section-label">📋 Nota nutricional (a cada 3 dias)</span>
-      <p class="muted" style="margin:0;">{{ nota_nutricional.mensagem }}</p>
-      {% if nota_nutricional.sugestoes %}
-        <p class="muted" style="margin:6px 0 0;"><strong>Sugestões ricas em proteína:</strong></p>
-        <ul class="muted" style="margin:4px 0 0; padding-left:18px;">
-          {% for nome in nota_nutricional.sugestoes %}
-            <li>{{ nome }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    </div>
-  {% endif %}
+  {# ===== Conselhos: ligação sempre visível (o pop-up aparece de 3 em 3 dias) ===== #}
+  <a href="{{ url_for('conselhos') }}" class="btn btn-secondary btn-block">📋 Ver conselhos</a>
 
   {# ===== Ação rápida ===== #}
   <div class="cta-block">
@@ -101,4 +89,48 @@
     </a>
   </div>
 
+{% endblock %}
+
+{% block folha %}
+  {% if conselhos_popup %}
+  <div class="sheet-backdrop" id="conselhos-popup" role="dialog" aria-modal="true" aria-labelledby="conselhos-titulo">
+    <div class="sheet" style="overflow:hidden;">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <h2 id="conselhos-titulo">📋 Conselhos para ti</h2>
+        <button type="button" class="bell" id="conselhos-fechar" aria-label="Fechar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <p class="muted" style="margin:0;">Resumo dos teus últimos dias.</p>
+      <div class="stack" style="overflow-y:auto;flex:1;min-height:0;">
+        {% set lista_conselhos = conselhos_popup %}
+        {% include "_conselhos_lista.html" %}
+      </div>
+      <button type="button" class="btn btn-primary btn-block" id="conselhos-entendi">Entendi</button>
+    </div>
+  </div>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  {% if conselhos_popup %}
+  <script>
+    (function () {
+      var pop = document.getElementById('conselhos-popup');
+      if (!pop) return;
+      var chave = 'conselhos_visto_{{ today }}';
+      var jaViu = false;
+      try { jaViu = localStorage.getItem(chave) === '1'; } catch (e) {}
+      function fechar() {
+        pop.classList.remove('is-open');
+        try { localStorage.setItem(chave, '1'); } catch (e) {}
+      }
+      document.getElementById('conselhos-fechar').addEventListener('click', fechar);
+      document.getElementById('conselhos-entendi').addEventListener('click', fechar);
+      pop.addEventListener('click', function (e) { if (e.target === pop) fechar(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fechar(); });
+      if (!jaViu) pop.classList.add('is-open');
+    })();
+  </script>
+  {% endif %}
 {% endblock %}

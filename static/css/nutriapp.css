@@ -972,3 +972,22 @@ details.tile .recipe-body ul, details.tile .recipe-body ol { margin: 0; padding-
 .pf-recipe .txt { flex: 1; min-width: 0; }
 .pf-recipe .txt b { display: block; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pf-recipe .txt span { display: block; font-size: 11px; color: var(--n700); }
+
+/* ===== Conselhos (pop-up de 3 em 3 dias + página /conselhos) ===== */
+.conselho {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  border-left: 5px solid var(--n400);
+  padding: 12px 14px;
+}
+.conselho-aviso { border-left-color: var(--a600); }
+.conselho-ok { border-left-color: var(--s600); }
+.conselho-info { border-left-color: var(--n600); }
+.conselho-icone { font-size: 22px; line-height: 1.2; }
+.conselho-corpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.conselho-corpo strong { font-size: 15px; color: var(--text); }
+.conselho-corpo p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--n800); }
+.conselho-corpo .conselho-sug span { font-weight: 700; color: var(--a700); }

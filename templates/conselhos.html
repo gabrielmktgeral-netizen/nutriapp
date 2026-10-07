@@ -1,0 +1,14 @@
+{% extends "base_organic.html" %}
+
+{% block titulo %}Conselhos · NutriApp{% endblock %}
+{% block cabecalho %}Conselhos{% endblock %}
+{% block subcabecalho %}Com base nos teus registos{% endblock %}
+
+{% block conteudo %}
+  <p class="muted">Análise das tuas refeições dos últimos dias (calorias, proteína, hidratos e gordura), dos teus hábitos e da evolução do peso.</p>
+  <div class="stack">
+    {% set lista_conselhos = conselhos %}
+    {% include "_conselhos_lista.html" %}
+  </div>
+  <a href="{{ url_for('index') }}" class="btn btn-secondary btn-block">← Voltar a hoje</a>
+{% endblock %}

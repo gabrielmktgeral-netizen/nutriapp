@@ -1,0 +1,16 @@
+{# Lista de conselhos — usada no pop-up do Início e na página /conselhos.
+   Espera a variável `lista_conselhos`. #}
+{% for c in lista_conselhos %}
+  <div class="conselho conselho-{{ c.nivel }}">
+    <div class="conselho-icone" aria-hidden="true">{{ c.icone }}</div>
+    <div class="conselho-corpo">
+      <strong>{{ c.titulo }}</strong>
+      <p>{{ c.texto }}</p>
+      {% if c.sugestoes %}
+        <p class="conselho-sug"><span>Receitas ricas em proteína:</span> {{ c.sugestoes | join(" · ") }}</p>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  <p class="muted">Ainda não há dados suficientes. Regista as tuas refeições durante uns dias e eu analiso os teus hábitos.</p>
+{% endfor %}
