@@ -1,0 +1,173 @@
+{% extends "base_organic.html" %}
+
+{% block titulo %}Histórico · NutriApp{% endblock %}
+{% block cabecalho %}Histórico{% endblock %}
+{% block subcabecalho %}Perceber o que fizeste{% endblock %}
+
+{% macro icone_halter(tam=12) -%}
+  <svg width="{{ tam }}" height="{{ tam }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14 M18 5v14 M3 9v6 M21 9v6 M6 12h12"></path></svg>
+{%- endmacro %}
+
+{% block conteudo %}
+
+<div class="hx">
+
+  {# ===== Navegação entre semanas ===== #}
+  <div class="hx-nav">
+    <a class="btn btn-secondary hx-arrow" href="{{ url_for('historico', semana=anterior) }}" aria-label="Semana anterior">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+      <span class="hx-arrow-txt">Semana anterior</span>
+    </a>
+    <div class="hx-range">
+      <span class="kicker kicker-sage">{{ 'Esta semana' if e_atual else 'Semana' }}</span>
+      <strong>{{ intervalo }}</strong>
+    </div>
+    {% if seguinte %}
+      <a class="btn btn-secondary hx-arrow" href="{{ url_for('historico', semana=seguinte) }}" aria-label="Semana seguinte">
+        <span class="hx-arrow-txt">Semana seguinte</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+      </a>
+    {% else %}
+      <span class="btn btn-secondary hx-arrow is-off" aria-hidden="true">
+        <span class="hx-arrow-txt">Semana seguinte</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+      </span>
+    {% endif %}
+    <a class="btn btn-sm {{ 'btn-secondary' if e_atual else 'btn-primary' }} hx-hoje" href="{{ url_for('historico') }}">Hoje</a>
+  </div>
+
+  {# ===== Resumo da semana (só com dados reais) ===== #}
+  <div class="hx-resumo">
+    <span class="section-label">Resumo da semana</span>
+    <div class="hx-stats">
+      <div class="hx-stat">
+        <b>{{ resumo.dias_registos }}<small>/{{ resumo.dias_total }}</small></b>
+        <span>dias com registos</span>
+      </div>
+      <div class="hx-stat">
+        <b>{{ resumo.dias_exercicio }}</b>
+        <span>{{ 'dia' if resumo.dias_exercicio == 1 else 'dias' }} com exercício</span>
+      </div>
+      <div class="hx-stat">
+        <b>{{ resumo.refeicoes }}</b>
+        <span>refeições registadas</span>
+      </div>
+      <div class="hx-stat">
+        <b>{% if resumo.media_kcal is not none %}{{ resumo.media_kcal }}{% else %}—{% endif %}</b>
+        <span>média kcal/dia{% if resumo.meta_kcal %} · meta {{ resumo.meta_kcal }}{% endif %}</span>
+      </div>
+      <div class="hx-stat">
+        <b>{% if resumo.media_prot is not none %}{{ resumo.media_prot }}<small> g</small>{% else %}—{% endif %}</b>
+        <span>média proteína/dia{% if resumo.meta_prot %} · meta {{ resumo.meta_prot }} g{% endif %}</span>
+      </div>
+    </div>
+    {% if resumo.dias_total %}
+      <p class="hx-insight">
+        {% if resumo.dias_exercicio %}🏋️ {{ 'Nesta semana' if e_atual else 'Nessa semana' }} fizeste exercício {{ resumo.dias_exercicio }} {{ 'vez' if resumo.dias_exercicio == 1 else 'vezes' }}.
+        {% else %}🏋️ Sem exercício registado {{ 'nesta' if e_atual else 'nessa' }} semana.{% endif %}
+      </p>
+    {% endif %}
+  </div>
+
+  {# ===== Calendário semanal ===== #}
+  <div class="hx-cal">
+    <div class="hx-week" role="tablist" aria-label="Dias da semana">
+      {% for d in dias %}
+        <a class="hx-day is-{{ d.estado }}{% if d.hoje %} is-today{% endif %}{% if d.iso == selecionado %} is-sel{% endif %}"
+           href="{{ url_for('historico', semana=monday, dia=d.iso) }}"
+           data-dia="{{ d.iso }}" role="tab" aria-selected="{{ 'true' if d.iso == selecionado else 'false' }}"
+           aria-controls="hx-dia-{{ d.iso }}">
+          <span class="hx-abbr">{{ d.abbr }}</span>
+          <span class="hx-num">{{ d.num }}</span>
+          <span class="hx-dot" style="--p: {{ d.n_tipos * 25 }}" aria-hidden="true"></span>
+          <span class="hx-ex{% if not d.exercicios %} is-none{% endif %}" aria-hidden="true">{{ icone_halter(11) }}</span>
+          <span class="sr">
+            {% if d.estado == 'completo' %}todas as refeições registadas{% elif d.estado == 'parcial' %}{{ d.n_tipos }} de 4 refeições{% elif d.estado == 'futuro' %}ainda não chegou{% else %}sem registos{% endif %}{% if d.exercicios %}, com exercício{% endif %}
+          </span>
+        </a>
+      {% endfor %}
+    </div>
+    <div class="hx-legenda" aria-hidden="true">
+      <span><i class="hx-dot is-completo"></i>Completo</span>
+      <span><i class="hx-dot is-parcial" style="--p: 50"></i>Parcial</span>
+      <span><i class="hx-dot is-vazio"></i>Sem registos</span>
+      <span class="hx-leg-ex">{{ icone_halter(11) }}Exercício</span>
+    </div>
+  </div>
+
+  {# ===== Resumo do dia selecionado ===== #}
+  <div class="hx-det">
+    {% for d in dias %}
+      <section class="hx-detail" id="hx-dia-{{ d.iso }}" role="tabpanel" {% if d.iso != selecionado %}hidden{% endif %}>
+        <div class="hx-det-head">
+          <h2>{{ d.titulo }}</h2>
+          {% if d.estado != 'futuro' %}<a href="{{ d.href }}">{{ 'Ir para hoje' if d.hoje else 'Abrir dia' }} →</a>{% endif %}
+        </div>
+
+        {% if not d.tem_registos %}
+          <p class="hx-empty">{% if d.estado == 'futuro' %}Este dia ainda não chegou.{% else %}Ainda não existem registos neste dia.{% endif %}</p>
+        {% else %}
+          <div class="hx-macros">
+            <div><b>{{ d.totais.kcal }}</b><span>kcal</span></div>
+            <div><b>{{ d.totais.p }}<small> g</small></b><span>Proteína</span></div>
+            <div><b>{{ d.totais.c }}<small> g</small></b><span>Hidratos</span></div>
+            <div><b>{{ d.totais.g }}<small> g</small></b><span>Gordura</span></div>
+          </div>
+
+          <div class="hx-list">
+            {% for r in d.refeicoes %}
+              <div class="hx-row{% if not r.registada %} is-missing{% endif %}">
+                <span class="hx-emoji" aria-hidden="true">{{ r.emoji }}</span>
+                <span class="grow">
+                  <b>{{ r.nome }}</b>
+                  {% if r.resumo %}<span class="muted hx-resumo-itens">{{ r.resumo }}</span>{% endif %}
+                </span>
+                <span class="hx-kcal">
+                  {% if r.saltada %}não comeste{% elif r.registada %}{{ r.kcal }} kcal{% else %}não registado{% endif %}
+                </span>
+              </div>
+            {% endfor %}
+            <div class="hx-row{% if not d.exercicios %} is-missing{% endif %}">
+              <span class="hx-emoji hx-emoji-ex" aria-hidden="true">{{ icone_halter(14) }}</span>
+              <span class="grow">
+                <b>Exercício</b>
+                {% if d.exercicios %}
+                  <span class="muted hx-resumo-itens">
+                    {% for e in d.exercicios %}{{ e.nome }}{% if e.duracao %} · {{ e.duracao }} min{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+                  </span>
+                {% endif %}
+              </span>
+              <span class="hx-kcal">{% if d.exercicios %}✓ feito{% else %}sem treino{% endif %}</span>
+            </div>
+          </div>
+        {% endif %}
+      </section>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Mudar de dia sem recarregar a página (os links continuam a funcionar sem JS)
+  (function () {
+    var dias = document.querySelectorAll('.hx-day');
+    dias.forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        var iso = el.getAttribute('data-dia');
+        var painel = document.getElementById('hx-dia-' + iso);
+        if (!painel) return;
+        e.preventDefault();
+        dias.forEach(function (o) {
+          o.classList.toggle('is-sel', o === el);
+          o.setAttribute('aria-selected', o === el ? 'true' : 'false');
+        });
+        document.querySelectorAll('.hx-detail').forEach(function (p) { p.hidden = (p !== painel); });
+        try { history.replaceState(null, '', el.getAttribute('href')); } catch (err) {}
+      });
+    });
+  })();
+</script>
+{% endblock %}

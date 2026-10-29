@@ -63,6 +63,20 @@ def get_public_key():
     return _load_keys()[1]
 
 
+def chaves_persistentes():
+    """True se as chaves VAPID vêm das variáveis de ambiente.
+    No Render (disco apagado a cada reinício) é essencial: sem isto as
+    chaves mudam sempre que o servidor reinicia e os telemóveis já
+    subscritos deixam de receber avisos (sem erro visível)."""
+    return bool(os.environ.get("VAPID_PRIVATE_KEY") and os.environ.get("VAPID_PUBLIC_KEY"))
+
+
+def chaves_atuais():
+    """(privada, pública) em uso — só para mostrar ao dono na página
+    Notificações quando ainda não estão guardadas no Render."""
+    return _load_keys()
+
+
 def send_notification(subscription_info, title, body, url="/"):
     """Envia uma notificação. Devolve (True/False, detalhe).
     False = subscrição já não é válida (expirou/desativada) e deve ser removida.

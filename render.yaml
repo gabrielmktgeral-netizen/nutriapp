@@ -9,3 +9,11 @@ services:
         sync: false
       - key: SECRET_KEY
         generateValue: true
+      # Notificações: chaves fixas (sem elas mudam a cada reinício e os avisos deixam de chegar)
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      # Chave do endpoint /lembretes/verificar (chamado pelo cron-job.org de 5 em 5 min)
+      - key: LEMBRETES_CHAVE
+        sync: false

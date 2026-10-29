@@ -67,7 +67,10 @@
 
   {# ===== Semana ===== #}
   <div class="week-block stack">
-    <span class="section-label">Esta semana</span>
+    <div class="pf-sechead" style="margin:0;">
+      <span class="section-label">Esta semana</span>
+      <a href="{{ url_for('historico') }}">Ver semana completa →</a>
+    </div>
     <div class="week">
       {% for d in semana %}
         <a href="{{ d.href }}" style="text-decoration:none; color:inherit;" class="{% if d.hoje %}is-today{% endif %}">

@@ -146,6 +146,11 @@ def get_profile():
         "pular_lembrete_almoco": _prop(page, "Pular Lembrete Almoco", "checkbox"),
         "pular_lembrete_lanche": _prop(page, "Pular Lembrete Lanche", "checkbox"),
         "pular_lembrete_jantar": _prop(page, "Pular Lembrete Jantar", "checkbox"),
+        # lembrete de exercício: desligado só se esta caixa estiver marcada
+        # (se a propriedade não existir no Notion, fica None = ligado)
+        "pular_lembrete_treino": bool(_prop(page, "Pular Lembrete Treino", "checkbox")),
+        # controlo interno dos lembretes já enviados hoje (JSON), para não repetir
+        "lembretes_enviados": _prop(page, "Lembretes Enviados", "text") or "",
     }
     _cache_set("profile", perfil)
     return perfil
@@ -175,6 +180,10 @@ def save_profile(data: dict):
         "Pular Lembrete Lanche": {"checkbox": bool(data.get("pular_lembrete_lanche"))},
         "Pular Lembrete Jantar": {"checkbox": bool(data.get("pular_lembrete_jantar"))},
     }
+    # Só grava o lembrete de exercício quando vem nos dados — assim o
+    # onboarding (que não tem este campo) nunca o volta a ligar por engano.
+    if "pular_lembrete_treino" in data:
+        properties["Pular Lembrete Treino"] = {"checkbox": bool(data.get("pular_lembrete_treino"))}
     properties = {k: v for k, v in properties.items() if v is not None}
 
     existing = get_profile()
@@ -182,6 +191,23 @@ def save_profile(data: dict):
     if existing:
         return _update_page(existing["page_id"], properties)
     return _create_page(DS_PERFIL, properties)
+
+
+def save_lembretes_enviados(texto):
+    """Grava só o controlo de lembretes enviados (não toca no resto do perfil).
+    Nunca deixa os lembretes falharem se o Notion não aceitar a escrita."""
+    try:
+        existing = get_profile()
+        if not existing:
+            return False
+        _update_page(existing["page_id"], {
+            "Lembretes Enviados": {"rich_text": [{"text": {"content": texto[:1900]}}]},
+        })
+        _cache_clear("profile")
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"[lembretes] não foi possível guardar o controlo no Notion: {exc}", flush=True)
+        return False
 
 
 # ---------- REFEIÇÕES ----------

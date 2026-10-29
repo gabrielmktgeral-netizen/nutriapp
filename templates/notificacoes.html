@@ -2,32 +2,156 @@
 
 {% block titulo %}Notificações · NutriApp{% endblock %}
 {% block cabecalho %}🔔 Notificações{% endblock %}
-{% block subcabecalho %}Avisos para não te esqueceres de registar{% endblock %}
+{% block subcabecalho %}Saber quando deves agir{% endblock %}
 
 {% block conteudo %}
 
-<div class="card-lg">
-  <span class="section-label">Como funciona</span>
-  <ul style="padding-left:18px; margin:8px 0 0; font-size:13px; line-height:1.6; color:var(--n800);">
-    <li>Android: funciona logo, em qualquer navegador.</li>
-    <li>iPhone: adiciona primeiro o site ao ecrã principal (Partilhar → Adicionar ao ecrã principal), depois ativa aqui.</li>
-    <li>Avisamos ~30-90 min depois da hora de uma refeição não registada, e à hora do treino.</li>
-  </ul>
-</div>
+<div class="cols-2">
 
-<div class="card-lg">
-  <span class="section-label" id="status-title">A verificar estado...</span>
-  <p class="subtitle" id="status-text"></p>
-  <button class="btn btn-primary btn-block" id="btn-ativar">Ativar notificações</button>
-  <button class="btn btn-secondary btn-block" id="btn-desativar" hidden>Desativar neste dispositivo</button>
-</div>
+  {# ================= Coluna 1: os lembretes ================= #}
+  <div class="stack">
 
-<div class="card-lg">
-  <span class="section-label">Testar</span>
-  <p class="subtitle">{{ n_subs }} dispositivo(s) ativo(s) neste site.</p>
-  <form method="post" action="{{ url_for('notificacoes_teste') }}">
-    <button class="btn btn-secondary btn-block" type="submit">Enviar notificação de teste</button>
-  </form>
+    <div class="card-lg">
+      <div class="pf-sechead"><span class="section-label" style="margin:0;">Lembretes</span></div>
+
+      <div class="stack" style="margin-top:8px;">
+
+        {# ----- A. Exercício ----- #}
+        <div class="nt-rem">
+          <form method="post" action="{{ url_for('notificacoes_exercicio') }}">
+            <input type="hidden" name="acao" value="alternar">
+            <button class="toggle-row" type="submit" aria-pressed="{{ 'true' if exercicio.ativo else 'false' }}">
+              <span class="nt-ico" aria-hidden="true">🏋️</span>
+              <span class="grow">
+                <span class="name">Lembrar de fazer exercício</span><br>
+                <span class="muted">
+                  {% if exercicio.sem_hora %}Escolhe uma hora em baixo
+                  {% else %}Todos os dias às {{ exercicio.hora }}{% endif %}
+                </span><br>
+                <span class="pill {{ '' if exercicio.ativo else 'pill-plain' }}">{{ 'Ativo' if exercicio.ativo else 'Desativado' }}</span>
+              </span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+          </form>
+          <form class="nt-rem-foot" method="post" action="{{ url_for('notificacoes_exercicio') }}">
+            <input type="hidden" name="acao" value="hora">
+            <label class="nt-hora-label" for="hora-treino">Hora</label>
+            <input class="pf-input nt-hora" id="hora-treino" type="time" name="hora" value="{{ exercicio.hora or '19:00' }}" required>
+            <button class="btn btn-secondary btn-sm" type="submit">Guardar hora</button>
+          </form>
+        </div>
+
+        {# ----- B. Refeição não registada ----- #}
+        <div class="nt-rem">
+          <form method="post" action="{{ url_for('notificacoes_refeicoes') }}">
+            <button class="toggle-row" type="submit" aria-pressed="{{ 'true' if refeicoes_ativas else 'false' }}">
+              <span class="nt-ico" aria-hidden="true">🍽️</span>
+              <span class="grow">
+                <span class="name">Refeição não registada</span><br>
+                <span class="muted">Aviso quando uma refeição ainda não foi registada</span><br>
+                {% if refeicoes_ativas == refeicoes|length %}
+                  <span class="pill">Ativado</span>
+                {% elif refeicoes_ativas %}
+                  <span class="pill pill-accent">Ativado em {{ refeicoes_ativas }} de {{ refeicoes|length }}</span>
+                {% else %}
+                  <span class="pill pill-plain">Desativado</span>
+                {% endif %}
+              </span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+          </form>
+          <div class="nt-rem-foot nt-subs">
+            {% for r in refeicoes %}
+              <form method="post" action="{{ url_for('alternar_lembrete') }}">
+                <input type="hidden" name="chave" value="{{ r.chave }}">
+                <input type="hidden" name="voltar" value="notificacoes">
+                <button class="nt-sub" type="submit" aria-pressed="{{ 'true' if r.ativo else 'false' }}"
+                        aria-label="{{ r.nome }} — {{ 'ativo' if r.ativo else 'desativado' }}">
+                  <span class="grow"><b>{{ r.nome }}</b> <span class="muted">{{ r.hora }}</span></span>
+                  <span class="switch switch-sm" aria-hidden="true"></span>
+                </button>
+              </form>
+            {% endfor %}
+          </div>
+          <p class="nt-nota">Só avisa 30–90 min depois da hora, e só se ainda não registaste.</p>
+        </div>
+
+      </div>
+    </div>
+
+    {# ----- Ligação ao histórico: o que fiz ----- #}
+    {% if exercicio_hoje is not none %}
+    <div class="card-lg">
+      <div class="pf-sechead"><span class="section-label" style="margin:0;">O teu ritmo</span></div>
+      <div class="nt-ritmo" style="margin-top:8px;">
+        <p>{% if exercicio_hoje %}✅ Hoje já fizeste exercício.{% else %}🏋️ Hoje ainda não fizeste exercício.{% endif %}</p>
+        <p>📅 Nos últimos 7 dias fizeste exercício <b>{{ dias_treino_7 }}</b> {{ 'vez' if dias_treino_7 == 1 else 'vezes' }}.</p>
+        <a class="go" href="{{ url_for('historico') }}">Ver semana completa →</a>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# ================= Coluna 2: este dispositivo ================= #}
+  <div class="stack">
+
+    <div class="card-lg">
+      <span class="section-label" id="status-title">A verificar estado...</span>
+      <p class="subtitle" id="status-text"></p>
+      <button class="btn btn-primary btn-block" id="btn-ativar">Ativar notificações</button>
+      <button class="btn btn-secondary btn-block" id="btn-desativar" hidden>Desativar neste dispositivo</button>
+    </div>
+
+    <div class="card-lg">
+      <span class="section-label">Testar</span>
+      <p class="subtitle">{{ n_subs }} dispositivo(s) ativo(s) neste site.</p>
+      <form method="post" action="{{ url_for('notificacoes_teste') }}">
+        <button class="btn btn-secondary btn-block" type="submit">Enviar notificação de teste</button>
+      </form>
+    </div>
+
+    <div class="card-lg">
+      <span class="section-label">Como funciona</span>
+      <ul class="nt-lista">
+        <li>Android: funciona logo, em qualquer navegador.</li>
+        <li>iPhone: adiciona o site ao ecrã principal (Partilhar → Adicionar ao ecrã principal), depois ativa aqui.</li>
+        <li>PC: o navegador tem de estar a correr (pode estar sem separadores).</li>
+        <li>Chega mesmo com o site e o separador fechados.</li>
+      </ul>
+    </div>
+
+    <details class="card-lg nt-tec">
+      <summary class="section-label">
+        Estado técnico
+        {% if (em_render and not chaves_ok) or not agendador_externo %}<span class="pill pill-accent">atenção</span>{% endif %}
+      </summary>
+      <ul class="nt-lista">
+        <li>
+          {% if agendador_externo %}✅ Agendador externo configurado (lembretes mesmo com o servidor a dormir).
+          {% else %}⚠️ Falta o agendador externo: sem ele, os avisos só saem enquanto o servidor estiver acordado.{% endif %}
+        </li>
+        <li>
+          Última verificação:
+          {% if ultima_verificacao %}{{ ultima_verificacao }} ({{ 'externa' if ultima_origem == 'externo' else 'interna' }}).
+          {% else %}nenhuma desde o último arranque do servidor.{% endif %}
+        </li>
+        {% if em_render %}
+        <li>
+          {% if chaves_ok %}✅ Chaves de notificação guardadas no Render.
+          {% else %}⚠️ Chaves de notificação não guardadas no Render: mudam a cada reinício e os avisos deixam de chegar.{% endif %}
+        </li>
+        {% endif %}
+      </ul>
+      {% if chaves %}
+        <p class="nt-nota">Cria estas 2 variáveis no Render (Environment) e faz “Save”:</p>
+        <div class="nt-chave"><b>VAPID_PUBLIC_KEY</b><code>{{ chaves[1] }}</code></div>
+        <div class="nt-chave"><b>VAPID_PRIVATE_KEY</b><code>{{ chaves[0] }}</code></div>
+      {% endif %}
+    </details>
+
+  </div>
+
 </div>
 
 {% endblock %}

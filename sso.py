@@ -31,7 +31,9 @@ MONDAY = "https://monday-gabriel.netlify.app/"
 REDIRECT = os.environ.get("MONDAY_REDIRECT", "https://nutriapp-rtwj.onrender.com/sso/callback")
 
 # Rotas que não precisam de sessão (não mostram dados pessoais).
-PUBLICAS = ("/static/", "/sso/", "/sw.js", "/saude", "/favicon.ico", "/manifest.json")
+PUBLICAS = ("/static/", "/sso/", "/sw.js", "/saude", "/favicon.ico", "/manifest.json",
+            # chamado pelo agendador externo; protegido pela sua própria chave (LEMBRETES_CHAVE)
+            "/lembretes/verificar")
 
 _cache = {}  # token -> (instante, ok)
 

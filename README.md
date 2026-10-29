@@ -105,3 +105,22 @@ uns segundos a acordar no acesso seguinte — normal, não é erro.
 * Expandir tabela de alimentos ou ligar a uma base de dados alimentar (ex: Open Food Facts) para código de barras.
 * Notificações push nos horários configurados.
 * App Android nativa com Health Connect (fase 2, depois do MVP validado).
+
+## Lembretes com o Render a dormir (cron-job.org)
+
+O Render grátis adormece após ~15 min sem visitas. A dormir, nenhum lembrete sai.
+Solução: um serviço grátis chama a app de 5 em 5 min (acorda-a e envia os avisos).
+
+**Passo 1 — Chave no Render**
+* Render → serviço → Environment → `LEMBRETES_CHAVE` = uma palavra-passe longa à tua escolha
+* Confirma também `VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY` (a página Notificações → "Estado técnico" mostra-as se faltarem)
+
+**Passo 2 — cron-job.org**
+* Cria conta grátis em https://cron-job.org
+* "Create cronjob"
+* URL: `https://nutriapp-rtwj.onrender.com/lembretes/verificar?chave=A_TUA_CHAVE`
+* Execução: a cada 5 minutos
+* Guardar
+
+**Passo 3 — Confirmar**
+* Página Notificações → "Estado técnico" → "Última verificação: há X min (externa)"

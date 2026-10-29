@@ -50,6 +50,15 @@ def save_profile(profile: dict):
     return current
 
 
+def save_lembretes_enviados(texto):
+    data = _load()
+    if not data["profile"]:
+        return False
+    data["profile"]["lembretes_enviados"] = texto
+    _save(data)
+    return True
+
+
 # ---------- REFEIÇÕES ----------
 
 def add_meal(data_iso, tipo, texto_original, kcal, proteina_g, hidratos_g, gordura_g):

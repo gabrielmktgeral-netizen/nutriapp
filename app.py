@@ -436,6 +436,8 @@ def alternar_lembrete():
         profile = db.get_profile() or {}
         campo = f"pular_lembrete_{chave}"
         atualizar_perfil(**{campo: not profile.get(campo)})
+    if request.form.get("voltar") == "notificacoes":
+        return redirect(url_for("notificacoes"))
     return redirect(url_for("perfil"))
 
 
@@ -828,10 +830,134 @@ def service_worker():
     return send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
 
 
+def _dias_com_exercicio(exercicios):
+    """Conjunto de datas (YYYY-MM-DD) com pelo menos um treino registado."""
+    return {str(e.get("data") or "")[:10] for e in exercicios if e.get("data")}
+
+
+def _ha_quanto(quando):
+    if not quando:
+        return None
+    try:
+        agora = datetime.now(quando.tzinfo)
+        minutos = int((agora - quando).total_seconds() // 60)
+    except Exception:  # noqa: BLE001
+        return None
+    if minutos < 1:
+        return "agora mesmo"
+    if minutos < 60:
+        return f"há {minutos} min"
+    return f"há {minutos // 60} h"
+
+
 @app.route("/notificacoes")
 def notificacoes():
+    import reminders
+    profile = (db.get_profile() if db.configured() else None) or {}
     n_subs = len(db.get_push_subscriptions()) if db.configured() else 0
-    return render_template("notificacoes.html", vapid_public_key=push.get_public_key(), n_subs=n_subs)
+
+    hora_treino = (profile.get("hora_treino") or "").strip()
+    exercicio = {
+        "hora": hora_treino,
+        "ativo": bool(hora_treino) and not profile.get("pular_lembrete_treino"),
+        "sem_hora": not hora_treino,
+    }
+
+    refeicoes = []
+    for chave, nome in LEMBRETE_TIPOS:
+        refeicoes.append({
+            "chave": chave,
+            "nome": nc.MEAL_LABELS[chave][1],
+            "hora": profile.get(HORA_CAMPO_POR_TIPO[chave], ""),
+            "ativo": not profile.get(f"pular_lembrete_{chave}"),
+        })
+    refeicoes_ativas = sum(1 for r in refeicoes if r["ativo"])
+
+    # Liga "saber quando agir" a "perceber o que fiz": hoje + últimos 7 dias
+    hoje = date.today()
+    exercicio_hoje, dias_treino_7 = None, None
+    if db.configured() and profile:
+        try:
+            ex7 = db.get_exercise_between((hoje - timedelta(days=6)).isoformat(), hoje.isoformat())
+            dias = _dias_com_exercicio(ex7)
+            exercicio_hoje = hoje.isoformat() in dias
+            dias_treino_7 = len(dias)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[notificacoes] sem dados de exercício: {exc}")
+
+    ultima = reminders.ULTIMA_VERIFICACAO
+    em_render = bool(os.environ.get("RENDER"))
+    chaves_ok = push.chaves_persistentes()
+    chaves = push.chaves_atuais() if (em_render and not chaves_ok) else None
+
+    return render_template(
+        "notificacoes.html", vapid_public_key=push.get_public_key(), n_subs=n_subs,
+        exercicio=exercicio, refeicoes=refeicoes, refeicoes_ativas=refeicoes_ativas,
+        exercicio_hoje=exercicio_hoje, dias_treino_7=dias_treino_7,
+        agendador_externo=bool(os.environ.get("LEMBRETES_CHAVE")),
+        ultima_verificacao=_ha_quanto(ultima.get("quando")),
+        ultima_origem=ultima.get("origem"),
+        em_render=em_render, chaves_ok=chaves_ok, chaves=chaves,
+        notificacoes_novas=False,
+    )
+
+
+@app.route("/notificacoes/exercicio", methods=["POST"])
+def notificacoes_exercicio():
+    """Liga/desliga o lembrete de exercício e/ou muda a hora.
+    A hora é a mesma "Hora habitual de treino" do Perfil (um só sítio na BD)."""
+    acao = request.form.get("acao", "hora")
+    profile = db.get_profile() or {}
+    hora = (request.form.get("hora") or "").strip()
+    if acao == "alternar":
+        ativo_agora = bool((profile.get("hora_treino") or "").strip()) and not profile.get("pular_lembrete_treino")
+        if ativo_agora:
+            atualizar_perfil(pular_lembrete_treino=True)
+            flash("Lembrete de exercício desativado.", "success")
+        else:
+            campos = {"pular_lembrete_treino": False}
+            if not (profile.get("hora_treino") or "").strip():
+                campos["hora_treino"] = hora or "19:00"
+            atualizar_perfil(**campos)
+            flash("Lembrete de exercício ativado! 🏋️", "success")
+    else:
+        try:
+            datetime.strptime(hora, "%H:%M")
+        except ValueError:
+            flash("Escolhe uma hora válida.", "error")
+            return redirect(url_for("notificacoes"))
+        atualizar_perfil(hora_treino=hora, pular_lembrete_treino=False)
+        flash(f"Lembrete de exercício guardado para as {hora}. 🏋️", "success")
+    return redirect(url_for("notificacoes"))
+
+
+@app.route("/notificacoes/refeicoes", methods=["POST"])
+def notificacoes_refeicoes():
+    """Interruptor geral "Refeição não registada": se algum lembrete de
+    refeição estiver ligado, desliga todos; caso contrário liga todos.
+    Os interruptores individuais (por refeição) continuam a existir."""
+    profile = db.get_profile() or {}
+    algum_ativo = any(not profile.get(f"pular_lembrete_{t}") for t, _ in LEMBRETE_TIPOS)
+    atualizar_perfil(**{f"pular_lembrete_{t}": algum_ativo for t, _ in LEMBRETE_TIPOS})
+    flash("Lembretes de refeição " + ("desativados." if algum_ativo else "ativados! 🍽️"), "success")
+    return redirect(url_for("notificacoes"))
+
+
+@app.route("/lembretes/verificar", methods=["GET", "POST"])
+def lembretes_verificar():
+    """Chamado de X em X minutos por um agendador externo (ex: cron-job.org),
+    para os lembretes saírem mesmo com o Render adormecido (ver reminders.py).
+    Protegido pela variável de ambiente LEMBRETES_CHAVE, enviada no
+    cabeçalho "x-lembretes" ou no parâmetro ?chave=. Não mostra dados pessoais."""
+    import hmac
+    chave = os.environ.get("LEMBRETES_CHAVE", "")
+    if not chave:
+        return jsonify({"ok": False, "erro": "Falta configurar LEMBRETES_CHAVE no servidor"}), 503
+    dada = request.headers.get("x-lembretes") or request.args.get("chave") or ""
+    if not hmac.compare_digest(chave, dada):
+        return jsonify({"ok": False, "erro": "Chave inválida"}), 403
+    resumo = verificar_lembretes(origem="externo")
+    return jsonify(resumo), 200, {"Cache-Control": "no-store"}
 
 
 @app.route("/notificacoes/subscrever", methods=["POST"])
@@ -1337,6 +1463,144 @@ def exercicio():
         data_legivel=data_legivel, modo=modo, treino=treino_organic, exercicios=exercicios_organic,
         plano_semanal=plano_semanal_organic, semana=semana_organic, resumo_semana=resumo_semana,
         week_ex=week_ex, active_exercise=active_exercise,
+    )
+
+
+# ---------- HISTÓRICO SEMANAL ----------
+# Construído só a partir dos registos que já existem (Refeições + Exercício);
+# não cria nem guarda nada de novo.
+
+DIAS_SEMANA_LONGOS = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira",
+                      "Sexta-feira", "Sábado", "Domingo"]
+MESES_ABBR = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
+                "agosto", "setembro", "outubro", "novembro", "dezembro"]
+TIPOS_REFEICAO = ["pequeno_almoco", "almoco", "lanche", "jantar"]
+
+
+def _e_saltada(meal):
+    return meal.get("texto_original") == "Não comi nada"
+
+
+@app.route("/historico")
+def historico():
+    today = date.today()
+    monday_atual, _ = week_bounds(today)
+    ref = date.fromisoformat(data_valida(request.args.get("semana"), default=today.isoformat()))
+    monday, sunday = week_bounds(ref)
+    if monday > monday_atual:  # semanas futuras não têm registos
+        monday, sunday = week_bounds(today)
+
+    if not db.configured():
+        return redirect(url_for("onboarding"))
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        f_profile = ex.submit(db.get_profile)
+        f_meals = ex.submit(db.get_meals_between, monday.isoformat(), sunday.isoformat())
+        f_ex = ex.submit(db.get_exercise_between, monday.isoformat(), sunday.isoformat())
+        f_foods = ex.submit(db.get_custom_foods)
+        profile = f_profile.result()
+        meals = f_meals.result()
+        try:
+            exercicios = f_ex.result()
+        except Exception as exc:  # noqa: BLE001
+            print(f"[historico] sem dados de exercício: {exc}")
+            exercicios = []
+        alimentos_custom = f_foods.result()
+    if not profile or not profile.get("idade"):
+        return redirect(url_for("onboarding"))
+
+    extra = mi.dict_custom(alimentos_custom)
+    peso_unidade = mi.dict_peso_unidade(alimentos_custom)
+    targets = nc.macro_targets(profile) or {"kcal": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}
+
+    dias = []
+    for i in range(7):
+        d = monday + timedelta(days=i)
+        d_iso = d.isoformat()
+        day_meals = [m for m in meals if str(m.get("data") or "")[:10] == d_iso]
+        day_ex = [e for e in exercicios if str(e.get("data") or "")[:10] == d_iso]
+        por_tipo = {}
+        for m in day_meals:
+            por_tipo.setdefault(m["tipo"], m)
+        comidas = [m for m in day_meals if not _e_saltada(m)]
+        totais = {
+            "kcal": round(sum(m["kcal"] or 0 for m in comidas)),
+            "p": round(sum(m["proteina_g"] or 0 for m in comidas)),
+            "c": round(sum(m["hidratos_g"] or 0 for m in comidas)),
+            "g": round(sum(m["gordura_g"] or 0 for m in comidas)),
+        }
+        n_tipos = len([t for t in TIPOS_REFEICAO if t in por_tipo])
+        if d > today:
+            estado = "futuro"
+        elif n_tipos == len(TIPOS_REFEICAO):
+            estado = "completo"
+        elif n_tipos:
+            estado = "parcial"
+        else:
+            estado = "vazio"
+
+        refeicoes = []
+        for t in TIPOS_REFEICAO:
+            m = por_tipo.get(t)
+            item = {"nome": nc.MEAL_LABELS[t][1], "emoji": nc.MEAL_LABELS[t][0],
+                    "registada": bool(m), "saltada": bool(m) and _e_saltada(m),
+                    "kcal": round(m["kcal"] or 0) if m else 0, "resumo": ""}
+            if m and not item["saltada"]:
+                itens = mi.resumo_itens(m.get("texto_original"), extra=extra, peso_unidade=peso_unidade)
+                if itens:
+                    item["resumo"] = ", ".join(it["nome"] for it in itens)
+            refeicoes.append(item)
+
+        dias.append({
+            "iso": d_iso, "abbr": DIA_SEMANA_ABBR[i].upper(), "num": d.day,
+            "titulo": f"{DIAS_SEMANA_LONGOS[i]}, {d.day} de {MESES_LONGOS[d.month - 1]}",
+            "hoje": d == today, "estado": estado, "n_tipos": n_tipos,
+            "tem_registos": bool(day_meals) or bool(day_ex),
+            "refeicoes": refeicoes, "totais": totais,
+            "pct_kcal": min(100, round(totais["kcal"] / targets["kcal"] * 100)) if targets["kcal"] else 0,
+            "exercicios": [{"nome": e.get("nome") or "Treino", "duracao": e.get("duracao_min"),
+                            "kcal": e.get("kcal_estimadas")} for e in day_ex],
+            "href": url_for("index") if d == today else url_for("dia", data_iso=d_iso),
+        })
+
+    # ----- resumo da semana (só dias que já passaram/hoje) -----
+    passados = [d for d in dias if d["estado"] != "futuro"]
+    dias_com_comida = [d for d in passados if d["totais"]["kcal"] > 0]
+    n_dias_reg = sum(1 for d in passados if d["n_tipos"])
+    resumo = {
+        "dias_registos": n_dias_reg,
+        "dias_exercicio": sum(1 for d in passados if d["exercicios"]),
+        "dias_total": len(passados),
+        "media_kcal": round(sum(d["totais"]["kcal"] for d in dias_com_comida) / len(dias_com_comida)) if dias_com_comida else None,
+        "media_prot": round(sum(d["totais"]["p"] for d in dias_com_comida) / len(dias_com_comida)) if dias_com_comida else None,
+        "refeicoes": sum(1 for m in meals if not _e_saltada(m)),
+        "meta_kcal": round(targets["kcal"]), "meta_prot": round(targets["protein_g"]),
+    }
+
+    # dia selecionado: o pedido, senão hoje, senão o último com registos, senão segunda
+    pedido = request.args.get("dia")
+    isos = [d["iso"] for d in dias]
+    if pedido not in isos:
+        if today.isoformat() in isos:
+            pedido = today.isoformat()
+        else:
+            com_reg = [d["iso"] for d in dias if d["tem_registos"]]
+            pedido = com_reg[-1] if com_reg else isos[0]
+
+    e_atual = monday == monday_atual
+    if monday.month == sunday.month:
+        intervalo = f"{monday.day} — {sunday.day} {MESES_ABBR[sunday.month - 1]}"
+    else:
+        intervalo = f"{monday.day} {MESES_ABBR[monday.month - 1]} — {sunday.day} {MESES_ABBR[sunday.month - 1]}"
+    if monday.year != today.year:
+        intervalo += f" {monday.year}"
+
+    return render_template(
+        "historico.html", ecra="inicio", notificacoes_novas=False,
+        dias=dias, resumo=resumo, selecionado=pedido, intervalo=intervalo,
+        e_atual=e_atual, monday=monday.isoformat(),
+        anterior=(monday - timedelta(days=7)).isoformat(),
+        seguinte=(monday + timedelta(days=7)).isoformat() if not e_atual else None,
     )
 
 
