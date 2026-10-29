@@ -19,6 +19,10 @@ from reminders import verificar_lembretes
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-troca-isto")
+
+# Login único da MONDAY: sem sessão válida não se vê nem se altera nada (ver sso.py).
+import sso
+sso.ligar(app)
 app.jinja_env.filters["youtube_url"] = youtube_search_url
 
 
