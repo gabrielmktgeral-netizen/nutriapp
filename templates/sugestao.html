@@ -1,105 +1,212 @@
 {% extends "base_organic.html" %}
 
-{% block titulo %}Sugestões · NutriApp{% endblock %}
-{% block cabecalho %}Sugestões{% endblock %}
+{% block titulo %}Receitas · NutriApp{% endblock %}
+{% block cabecalho %}Receitas{% endblock %}
 {% block subcabecalho %}Com o que tens em casa{% endblock %}
+
+{% macro relogio(t=13) -%}
+  <svg width="{{ t }}" height="{{ t }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+{%- endmacro %}
+
+{% macro cartao(r, destaque=false) %}
+<article class="rx-card{% if destaque %} is-featured{% endif %}"
+         data-ordem="{{ r.ordem }}" data-p="{{ r.p }}"
+         data-tudo="{{ 1 if r.tenho_tudo else 0 }}" data-falta="{{ r.falta|length }}"
+         data-rapida="{{ 1 if r.rapida else 0 }}" data-proteica="{{ 1 if r.proteica else 0 }}">
+
+  <header class="rx-cover">
+    <span class="rx-emoji" aria-hidden="true">{{ r.emoji }}</span>
+    <div class="rx-badges">
+      {% if r.tenho_tudo %}
+        <span class="pill rx-have">✓ Tens tudo</span>
+      {% else %}
+        <span class="pill pill-accent">Falta {{ r.falta[0] }}</span>
+      {% endif %}
+      {% if r.minha %}<span class="pill pill-plain">A tua receita</span>{% endif %}
+    </div>
+  </header>
+
+  <div class="rx-main">
+    <span class="kicker rx-kick">{% if destaque %}Sugestão principal{% else %}Receita{% endif %}</span>
+    <h3 class="rx-title">{{ r.nome }}</h3>
+
+    <div class="rx-meta">
+      <span class="rx-time">{{ relogio() }} {% if r.estimado %}~{% endif %}{{ r.minutos }} min</span>
+      <span class="rx-kcal"><b>{{ r.kcal }}</b> kcal</span>
+      <span class="rx-match" title="Ingredientes-chave que tens na despensa">{{ r.n_tem }}/{{ r.n_chaves }} na despensa</span>
+      {% if r.cabe_hoje %}<span class="rx-fit" title="Cabe nas calorias que ainda tens disponíveis hoje">🌿 cabe hoje</span>{% endif %}
+    </div>
+
+    <div class="rx-macros">
+      <div class="rx-bar" aria-hidden="true">
+        <i class="b-p" style="width: {{ r.barra.p }}%"></i><i class="b-c" style="width: {{ r.barra.c }}%"></i><i class="b-g" style="width: {{ r.barra.g }}%"></i>
+      </div>
+      <dl>
+        <div><dt><i class="b-p"></i>Proteína</dt><dd>{{ r.p }} g</dd></div>
+        <div><dt><i class="b-c"></i>Hidratos</dt><dd>{{ r.c }} g</dd></div>
+        <div><dt><i class="b-g"></i>Gordura</dt><dd>{{ r.g }} g</dd></div>
+      </dl>
+    </div>
+
+
+    <details class="rx-more"{% if destaque %} open data-auto="1"{% endif %}>
+      <summary>
+        <span class="rx-more-open">Ver receita</span><span class="rx-more-close">Esconder receita</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+      </summary>
+      <div class="rx-body">
+        <section class="rx-ings">
+          <h4>Ingredientes</h4>
+          <ul>
+            {% for l in r.linhas %}
+              <li class="is-{{ l.estado }}">
+                <span class="rx-ico" aria-hidden="true">{% if l.estado == 'tens' %}✓{% elif l.estado == 'falta' %}+{% else %}·{% endif %}</span>
+                <span class="grow">{{ l.texto }}</span>
+                <span class="rx-tag">{% if l.estado == 'tens' %}tens{% elif l.estado == 'falta' %}falta {{ l.falta|join(', ') }}{% else %}básico{% endif %}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+        {% if r.preparo %}
+        <section class="rx-steps">
+          <h4>Preparação</h4>
+          <ol>
+            {% for passo in r.preparo %}<li><span class="rx-n">{{ loop.index }}</span><span>{{ passo }}</span></li>{% endfor %}
+          </ol>
+        </section>
+        {% endif %}
+      </div>
+    </details>
+  </div>
+
+  <footer class="rx-foot">
+    <form method="post" action="{{ url_for('registar_receita') }}">
+      <input type="hidden" name="receita_id" value="{{ r.id }}">
+      <button class="btn btn-primary btn-sm rx-reg" type="submit">Registar refeição</button>
+    </form>
+    {% if r.falta %}
+      <form method="post" action="{{ url_for('lista_compras') }}">
+        <input type="hidden" name="receita_id" value="{{ r.id }}">
+        <button class="btn btn-secondary btn-sm" type="submit">+ à despensa</button>
+      </form>
+    {% endif %}
+    <span class="rx-dest">Entra no {{ destino_label }} de hoje</span>
+  </footer>
+</article>
+{% endmacro %}
 
 {% block conteudo %}
 
-  <div class="card-lg card-sage">
-    <span class="kicker kicker-sage">Ainda disponível hoje</span>
-    <p class="num" style="font-size:19px;color:var(--s900);margin-top:4px">
-      {{ disponivel.kcal }} kcal · {{ disponivel.proteina }} g de proteína
-    </p>
-  </div>
-
-  <div class="cols-2">
-    <div class="stack">
-      <span class="section-label">Prontas a fazer</span>
-      {% for r in prontas %}
-        <details class="tile">
-          <summary>
-            <div class="tile-head">
-              <span class="t">{{ r.nome }}</span>
-              <span class="k">{{ r.kcal }} kcal</span>
-              <span class="chev">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-              </span>
-            </div>
-            <span class="macro-line">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
-          </summary>
-          <div class="recipe-body">
-            {% if r.ingredientes %}
-              <div>
-                <h4>Ingredientes</h4>
-                <ul>{% for ing in r.ingredientes %}<li>{{ ing }}</li>{% endfor %}</ul>
-              </div>
-            {% endif %}
-            {% if r.preparo %}
-              <div>
-                <h4>Preparo</h4>
-                <ol>{% for passo in r.preparo %}<li>{{ passo }}</li>{% endfor %}</ol>
-              </div>
-            {% endif %}
-            <div class="foot">
-              <span class="pill">Tens tudo em casa</span>
-              <form method="post" action="{{ url_for('registar_receita') }}">
-                <input type="hidden" name="receita_id" value="{{ r.id }}">
-                <button class="btn btn-primary btn-sm" type="submit">Registar</button>
-              </form>
-            </div>
-          </div>
-        </details>
+  {# ===== Topo: o que posso cozinhar hoje? ===== #}
+  <section class="rx-hero">
+    <div class="rx-hero-txt">
+      <span class="kicker kicker-sage">A tua cozinha</span>
+      <h2>O que posso cozinhar hoje?</h2>
+      {% if despensa_total %}
+        <p class="rx-lead">
+          {% if n_prontas %}Encontrámos <b>{{ n_prontas }} {{ 'receita' if n_prontas == 1 else 'receitas' }}</b> com os ingredientes que tens em casa.
+          {% else %}Ainda não há receitas com tudo o que tens em casa.{% endif %}
+          {% if n_quase %}<span class="rx-lead-2">+ {{ n_quase }} a que falta só 1 ingrediente.</span>{% endif %}
+        </p>
       {% else %}
-        <p class="muted">Nada pronto a fazer com o que tens em casa. Adiciona alimentos à despensa.</p>
-      {% endfor %}
+        <p class="rx-lead">A tua despensa está vazia. Junta o que tens em casa e mostramos-te o que dá para cozinhar.</p>
+      {% endif %}
+      <div class="rx-hero-stats">
+        <span class="pill">Ainda disponível hoje: {{ disponivel.kcal }} kcal · {{ disponivel.proteina }} g proteína</span>
+      </div>
     </div>
 
-    <div class="stack">
-      <span class="section-label accent">Quase lá</span>
-      {% for r in quase_la %}
-        <details class="tile">
-          <summary>
-            <div class="tile-head">
-              <span class="t">{{ r.nome }}</span>
-              <span class="k">{{ r.kcal }} kcal</span>
-              <span class="chev">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-              </span>
-            </div>
-            <span class="macro-line">P {{ r.p }} g · H {{ r.c }} g · G {{ r.g }} g</span>
-          </summary>
-          <div class="recipe-body">
-            {% if r.ingredientes %}
-              <div>
-                <h4>Ingredientes</h4>
-                <ul>{% for ing in r.ingredientes %}<li>{{ ing }}</li>{% endfor %}</ul>
-              </div>
-            {% endif %}
-            {% if r.preparo %}
-              <div>
-                <h4>Preparo</h4>
-                <ol>{% for passo in r.preparo %}<li>{{ passo }}</li>{% endfor %}</ol>
-              </div>
-            {% endif %}
-            <div class="foot">
-              <span class="pill pill-accent">Falta {{ r.falta }}</span>
-              <form method="post" action="{{ url_for('lista_compras') }}">
-                <input type="hidden" name="receita_id" value="{{ r.id }}">
-                <button class="btn btn-secondary btn-sm" type="submit">+ à despensa</button>
-              </form>
-            </div>
-          </div>
-        </details>
+    <div class="rx-pantry">
+      <div class="rx-pantry-head">
+        <span class="section-label" style="margin:0">Na despensa · {{ despensa_total }}</span>
+        <a href="{{ url_for('despensa') }}">Gerir →</a>
+      </div>
+      {% if despensa_nomes %}
+        <div class="rx-chips">
+          {% for n in despensa_nomes[:10] %}<span class="rx-chip">{{ n }}</span>{% endfor %}
+          {% if despensa_nomes|length > 10 %}<a class="rx-chip rx-chip-more" href="{{ url_for('despensa') }}">+{{ despensa_nomes|length - 10 }}</a>{% endif %}
+        </div>
       {% else %}
-        <p class="muted">Nada quase pronto de momento.</p>
-      {% endfor %}
+        <a class="btn btn-primary btn-sm" href="{{ url_for('despensa') }}">Adicionar alimentos</a>
+      {% endif %}
     </div>
+  </section>
+
+  {% if receitas %}
+    {# ===== Filtros ===== #}
+    <nav class="rx-filters" aria-label="Filtrar receitas">
+      {% for chave, rotulo, n in filtros %}
+        <a class="rx-filter" href="{{ url_for('sugestao', filtro=chave) }}" data-filtro="{{ chave }}"
+           aria-pressed="{{ 'true' if chave == filtro else 'false' }}">{{ rotulo }} <span>{{ n }}</span></a>
+      {% endfor %}
+    </nav>
+
+    {# ===== Biblioteca ===== #}
+    <div class="rx-grid" id="rx-grid" data-filtro-inicial="{{ filtro }}">
+      {% for r in receitas %}{{ cartao(r, destaque=loop.first) }}{% endfor %}
+    </div>
+    <p class="rx-empty" id="rx-empty" hidden>Nenhuma receita neste filtro. Experimenta outro, ou junta mais alimentos à despensa.</p>
+  {% else %}
+    <div class="rx-empty">
+      <span aria-hidden="true" style="font-size:34px">🧺</span>
+      <p>Ainda não há receitas com o que tens em casa (nem a que falte só 1 ingrediente).</p>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('despensa') }}">Adicionar à despensa</a>
+    </div>
+  {% endif %}
+
+  <div class="rx-bottom">
+    <span class="muted">Tempo com “~” = estimado. Rápidas = até {{ rapida_max }} min. Mais proteína = 25 g ou mais.</span>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('receitas') }}">📖 Criar a minha receita</a>
   </div>
 
-  <div class="row" style="border-top:1px solid var(--divider);padding-top:12px;flex-wrap:wrap;">
-    <span style="font-size:12px;font-weight:700;color:var(--n800)">{{ despensa_total }} itens na despensa</span>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('despensa') }}" style="margin-left:auto">Gerir despensa</a>
-  </div>
+{% endblock %}
 
+{% block scripts %}
+<script>
+  // Filtros sem recarregar (os links continuam a funcionar sem JS)
+  (function () {
+    var grid = document.getElementById('rx-grid');
+    if (!grid) return;
+    var cards = Array.prototype.slice.call(grid.querySelectorAll('.rx-card'));
+    var botoes = document.querySelectorAll('.rx-filter');
+    var vazio = document.getElementById('rx-empty');
+    var regras = {
+      todas: function () { return true; },
+      tudo: function (c) { return c.dataset.tudo === '1'; },
+      falta1: function (c) { return c.dataset.falta === '1'; },
+      rapidas: function (c) { return c.dataset.rapida === '1'; },
+      proteina: function (c) { return c.dataset.proteica === '1'; }
+    };
+
+    function aplicar(filtro) {
+      var ok = regras[filtro] ? filtro : 'todas';
+      var visiveis = cards.filter(regras[ok]);
+      if (ok === 'proteina') visiveis.sort(function (a, b) { return b.dataset.p - a.dataset.p; });
+      else visiveis.sort(function (a, b) { return a.dataset.ordem - b.dataset.ordem; });
+      cards.forEach(function (c) { c.hidden = true; c.classList.remove('is-featured'); });
+      // fecha só o que foi aberto automaticamente (o que abriste à mão fica aberto)
+      grid.querySelectorAll('.rx-more[data-auto]').forEach(function (d) { d.open = false; d.removeAttribute('data-auto'); });
+      visiveis.forEach(function (c, i) { c.hidden = false; c.style.order = i; });
+      if (visiveis[0]) {
+        visiveis[0].classList.add('is-featured');
+        var d = visiveis[0].querySelector('.rx-more');
+        if (d && !d.open) { d.open = true; d.setAttribute('data-auto', '1'); }
+        var k = visiveis[0].querySelector('.rx-kick');
+        cards.forEach(function (c) { var kk = c.querySelector('.rx-kick'); if (kk) kk.textContent = 'Receita'; });
+        if (k) k.textContent = ok === 'todas' ? 'Sugestão principal' : 'A melhor deste filtro';
+      }
+      if (vazio) vazio.hidden = visiveis.length > 0;
+      botoes.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.filtro === ok ? 'true' : 'false'); });
+    }
+
+    botoes.forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.preventDefault();
+        aplicar(b.dataset.filtro);
+        try { history.replaceState(null, '', b.getAttribute('href')); } catch (err) {}
+      });
+    });
+    aplicar(grid.dataset.filtroInicial || 'todas');
+  })();
+</script>
 {% endblock %}

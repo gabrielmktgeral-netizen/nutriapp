@@ -9,7 +9,7 @@ import data_store as db
 import nutrition_calc as nc
 from meal_parser import parse_meal_text
 from food_data import lookup as food_lookup
-from recipes import sugerir_receitas, find_recipe_by_name, RECIPES
+from recipes import sugerir_receitas, find_recipe_by_name, RECIPES, analisar_ingredientes, tempo_preparo, RAPIDA_MAX_MIN, _emoji_receita
 import meal_items as mi
 import conselhos as cons
 from workouts import get_workout_for_goal, youtube_search_url
@@ -1292,26 +1292,57 @@ def sugestao():
     pantry_nomes = [p["nome"] for p in pantry]
     excluidos_nomes = [e["nome"] for e in excluidos]
 
+    # Mesma lógica da Despensa de sempre (prontas = tens tudo, quase = falta 1),
+    # mas agora mostramos a biblioteca toda e não só as 6 primeiras.
     receitas_prontas, receitas_quase = sugerir_receitas(
-        pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=excluidos_nomes, top_n=6,
+        pantry_nomes, restante_kcal, restante_prot, excluidos_nomes=excluidos_nomes, top_n=1000,
         receitas_extra=minhas_receitas)
 
-    prontas = [{
-        "id": it["receita"]["nome"], "nome": it["receita"]["nome"], "kcal": round(it["receita"]["kcal"]),
-        "p": round(it["receita"]["proteina_g"]), "c": round(it["receita"]["hidratos_g"]), "g": round(it["receita"]["gordura_g"]),
-        "ingredientes": it["receita"].get("ingredientes", []), "preparo": it["receita"].get("preparo", []),
-    } for it in receitas_prontas]
-    quase_la = [{
-        "id": it["receita"]["nome"], "nome": it["receita"]["nome"], "kcal": round(it["receita"]["kcal"]),
-        "p": round(it["receita"]["proteina_g"]), "c": round(it["receita"]["hidratos_g"]), "g": round(it["receita"]["gordura_g"]),
-        "falta": it["faltam"][0] if it["faltam"] else "",
-        "ingredientes": it["receita"].get("ingredientes", []), "preparo": it["receita"].get("preparo", []),
-    } for it in receitas_quase]
+    # "Registar refeição" usa a regra de sempre (/sugestao/registar):
+    # entra na primeira refeição de hoje ainda por registar.
+    registados = {m["tipo"] for m in meals_today}
+    tipo_destino = next((t for t in ["pequeno_almoco", "almoco", "lanche", "jantar"] if t not in registados), "almoco")
+
+    receitas = []
+    for ordem, it in enumerate(receitas_prontas + receitas_quase):
+        r = it["receita"]
+        linhas, tem, falta = analisar_ingredientes(r, pantry_nomes)
+        minutos, estimado = tempo_preparo(r)
+        kcal, prot = round(r["kcal"] or 0), round(r["proteina_g"] or 0)
+        hid, gord = round(r["hidratos_g"] or 0), round(r["gordura_g"] or 0)
+        energia = prot * 4 + hid * 4 + gord * 9
+        receitas.append({
+            "id": r["nome"], "nome": r["nome"], "ordem": ordem,
+            "emoji": _emoji_receita(r), "minha": bool(it.get("_custom")),
+            "kcal": kcal, "p": prot, "c": hid, "g": gord,
+            "barra": {k: round(v / energia * 100) if energia else 0
+                      for k, v in (("p", prot * 4), ("c", hid * 4), ("g", gord * 9))},
+            "minutos": minutos, "estimado": estimado, "rapida": minutos <= RAPIDA_MAX_MIN,
+            "linhas": linhas, "n_chaves": len(tem) + len(falta), "n_tem": len(tem),
+            "falta": falta, "tenho_tudo": not falta,
+            "cabe_hoje": restante_kcal > 0 and kcal <= restante_kcal,
+            "proteica": prot >= 25,
+            "preparo": r.get("preparo", []),
+        })
+
+    filtros = [
+        ("todas", "Todas", len(receitas)),
+        ("tudo", "Tenho tudo", sum(1 for r in receitas if r["tenho_tudo"])),
+        ("falta1", "Falta 1 ingrediente", sum(1 for r in receitas if len(r["falta"]) == 1)),
+        ("rapidas", "Rápidas", sum(1 for r in receitas if r["rapida"])),
+        ("proteina", "Mais proteína", sum(1 for r in receitas if r["proteica"])),
+    ]
+    filtro = request.args.get("filtro", "todas")
+    if filtro not in {f[0] for f in filtros}:
+        filtro = "todas"
 
     return render_template(
         "sugestao.html", ecra="sugestoes", notificacoes_novas=False,
         disponivel={"kcal": f"{max(restante_kcal, 0):,}".replace(",", " "), "proteina": max(restante_prot, 0)},
-        prontas=prontas, quase_la=quase_la, despensa_total=len(pantry),
+        receitas=receitas, filtros=filtros, filtro=filtro,
+        n_prontas=filtros[1][2], n_quase=filtros[2][2],
+        despensa_total=len(pantry), despensa_nomes=pantry_nomes,
+        destino_label=nc.MEAL_LABELS[tipo_destino][1], rapida_max=RAPIDA_MAX_MIN,
     )
 
 

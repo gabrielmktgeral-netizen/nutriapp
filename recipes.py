@@ -504,6 +504,151 @@ RECIPES = [
 ]
 
 
+import re
+import unicodedata
+
+# Tempo total aproximado de preparação (min) das receitas fixas.
+# As receitas criadas por ti não têm este campo: o tempo é estimado a partir
+# do texto da preparação (ver tempo_preparo) e aparece com "~".
+TEMPO_MIN = {
+    "Omelete de ovos com espinafres e queijo fresco": 10,
+    "Torradas com ovo escalfado": 10,
+    "Papas de aveia com banana e mel": 10,
+    "Iogurte com fruta e nozes": 5,
+    "Sandes de atum com pão integral": 5,
+    "Panquecas de aveia e banana": 15,
+    "Torrada com queijo e tomate": 8,
+    "Batido proteico com banana e aveia": 5,
+    "Iogurte grego com aveia, banana e amendoim": 5,
+    "Ovos mexidos com pão e queijo fresco": 10,
+    "Caldo verde": 35,
+    "Sopa de legumes com feijão": 35,
+    "Canja de galinha": 45,
+    "Creme de cenoura": 35,
+    "Sopa de grão com espinafres": 20,
+    "Sopa de tomate com ovo escalfado": 25,
+    "Frango grelhado com arroz e brócolos": 25,
+    "Arroz de frango simples": 35,
+    "Frango estufado com legumes": 45,
+    "Bifanas com pão": 25,
+    "Carne de porco à moda alentejana simplificada": 35,
+    "Febras grelhadas com batata": 25,
+    "Frango assado com batata a murro": 55,
+    "Almôndegas de carne com massa": 40,
+    "Costeletas de porco grelhadas com arroz": 25,
+    "Peru estufado com legumes": 35,
+    "Salada de frango com queijo e nozes": 15,
+    "Rojões simplificados": 30,
+    "Bacalhau com batata e cebolada": 30,
+    "Bacalhau à Brás": 25,
+    "Bacalhau com natas simplificado": 40,
+    "Filetes de pescada com arroz": 25,
+    "Peixe grelhado com legumes salteados": 20,
+    "Arroz de marisco simplificado": 35,
+    "Sardinhas assadas com batata e pimentos": 30,
+    "Polvo com batata a murro (versão simples)": 30,
+    "Massa com atum e tomate": 15,
+    "Salmão grelhado com legumes": 15,
+    "Camarão salteado com alho e arroz": 20,
+    "Feijoada de legumes com ovo": 35,
+    "Salada mediterrânica de grão": 10,
+    "Tortilha de batata e ovo": 30,
+    "Empadão de batata vegetariano": 50,
+    "Migas de couve simplificadas": 25,
+    "Açorda de alho simplificada": 20,
+    "Grão salteado com espinafres": 15,
+    "Lentilhas estufadas com legumes": 30,
+    "Arroz de tomate simples": 30,
+    "Batata doce assada com ovo e espinafres": 30,
+    "Cozido à portuguesa simplificado": 70,
+    "Francesinha leve (versão simplificada)": 25,
+    "Chanfana simplificada (guisado de carne)": 80,
+    "Arroz de pato simplificado": 60,
+    "Caldeirada de peixe simplificada": 40,
+}
+
+RAPIDA_MAX_MIN = 15
+
+
+def _norm(texto):
+    """minúsculas e sem acentos — 'Pão' e 'pao' passam a bater certo."""
+    texto = unicodedata.normalize("NFKD", str(texto or ""))
+    return "".join(c for c in texto if not unicodedata.combining(c)).lower().strip()
+
+
+def _bate(chave, item):
+    """Mesma regra de sempre da Despensa (uma contém a outra), agora sem
+    ligar a acentos/maiúsculas. Ignora nomes vazios."""
+    c, p = _norm(chave), _norm(item)
+    return bool(c and p) and (c in p or p in c)
+
+
+def tempo_preparo(receita):
+    """(minutos, estimado). Usa o tempo definido; senão estima pelo texto
+    da preparação ('15 min', '1h', '25-30 min'…) + ~3 min por passo sem tempo."""
+    if receita.get("tempo_min"):
+        return int(receita["tempo_min"]), False
+    if receita.get("nome") in TEMPO_MIN:
+        return TEMPO_MIN[receita["nome"]], False
+    total = 0
+    for passo in receita.get("preparo") or []:
+        achados = re.findall(r"(\d+)\s*(?:-\s*(\d+))?\s*(min|h)\b", _norm(passo))
+        if achados:
+            for a, b, unidade in achados:
+                v = int(b or a)
+                total += v * 60 if unidade == "h" else v
+        else:
+            total += 3
+    return max(5, int(round(total / 5.0) * 5)), True
+
+
+def analisar_ingredientes(receita, pantry_nomes):
+    """Para cada linha de ingredientes diz se já tens, se falta, ou se é um
+    básico de cozinha (sal, azeite… — não entram na contagem da Despensa).
+    Devolve (linhas, tem, falta) com tem/falta = ingredientes-chave."""
+    chaves = list(receita.get("chave_despensa") or [])
+    tem = [c for c in chaves if any(_bate(c, p) for p in pantry_nomes)]
+    falta = [c for c in chaves if c not in tem]
+    usadas = set()
+    linhas = []
+    for linha in receita.get("ingredientes") or []:
+        n = _norm(linha)
+        nesta = [c for c in chaves if _norm(c) and (_norm(c) in n or _norm(c).rstrip("s") in n)]
+        usadas.update(nesta)
+        em_falta = [c for c in nesta if c in falta]
+        estado = "falta" if em_falta else ("tens" if nesta else "base")
+        linhas.append({"texto": linha, "estado": estado, "falta": em_falta})
+    for c in falta:  # chave em falta que não aparece escrita em nenhuma linha
+        if c not in usadas:
+            linhas.append({"texto": c, "estado": "falta", "falta": [c]})
+    return linhas, tem, falta
+
+
+def _emoji_receita(receita):
+    """Um ícone para dar cara a cada receita (só visual)."""
+    nome = _norm(receita.get("nome"))
+    chaves = " ".join(_norm(c) for c in receita.get("chave_despensa") or [])
+    tudo = nome + " " + chaves
+    regras = [
+        (("sopa", "caldo", "creme", "canja"), "🥣"),
+        (("salada",), "🥗"),
+        (("bacalhau", "peixe", "pescada", "salmao", "sardinha", "atum", "polvo", "caldeirada"), "🐟"),
+        (("camarao", "marisco"), "🦐"),
+        (("panqueca", "papas", "iogurte", "batido"), "🥞"),
+        (("omelete", "ovos mexidos", "tortilha", "torrada", "escalfado"), "🍳"),
+        (("massa", "almondega"), "🍝"),
+        (("frango", "peru", "pato", "galinha"), "🍗"),
+        (("porco", "febra", "costeleta", "bifana", "rojoes", "carne", "cozido", "chanfana", "francesinha"), "🥩"),
+        (("grao", "feijao", "lentilha", "feijoada"), "🫘"),
+        (("arroz",), "🍚"),
+        (("batata",), "🥔"),
+    ]
+    for chaves_r, emoji in regras:
+        if any(k in tudo for k in chaves_r):
+            return emoji
+    return "🍽️"
+
+
 def find_recipe_by_name(nome, receitas_extra=None):
     """Procura uma receita pelo nome exato (nas fixas ou nas do utilizador)."""
     receitas_extra = list(receitas_extra or [])
@@ -520,22 +665,21 @@ def sugerir_receitas(pantry_nomes, restante_kcal, restante_prot, excluidos_nomes
     Todas as outras (falta 2+) não aparecem — só sugerimos o que faz sentido já ou quase.
     Receitas com um alimento excluído são descartadas por completo.
     receitas_extra: receitas criadas pelo próprio utilizador (mesmo formato), incluídas na mistura."""
-    pantry_lower = [p.lower() for p in pantry_nomes]
-    excluidos_lower = [e.lower() for e in (excluidos_nomes or [])]
+    excluidos_nomes = [e for e in (excluidos_nomes or []) if _norm(e)]
 
     receitas_extra = list(receitas_extra or [])
     prontas, quase = [], []
     for r in RECIPES + receitas_extra:
-        chaves = [c.lower() for c in r["chave_despensa"]]
+        chaves = list(r["chave_despensa"])
 
         tem_excluido = any(
-            any(exc in chave or chave in exc for chave in chaves)
-            for exc in excluidos_lower
+            any(_bate(chave, exc) for chave in chaves)
+            for exc in excluidos_nomes
         )
         if tem_excluido:
             continue
 
-        tem = [chave for chave in chaves if any(chave in p or p in chave for p in pantry_lower)]
+        tem = [chave for chave in chaves if any(_bate(chave, p) for p in pantry_nomes)]
         falta = [chave for chave in chaves if chave not in tem]
         match_count = len(tem)
         total_chaves = len(r["chave_despensa"])
