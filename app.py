@@ -8,13 +8,14 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 import data_store as db
 import nutrition_calc as nc
 from meal_parser import parse_meal_text
-from food_data import lookup as food_lookup
+from food_data import lookup as food_lookup, lookup_detalhe as food_lookup_detalhe
 from recipes import sugerir_receitas, find_recipe_by_name, RECIPES, analisar_ingredientes, tempo_preparo, RAPIDA_MAX_MIN, _emoji_receita
 import meal_items as mi
 import conselhos as cons
 from workouts import get_workout_for_goal, youtube_search_url
 from exercise_planner import plano_diario, plano_semanal
 import push
+import foto_refeicao
 from reminders import verificar_lembretes
 
 app = Flask(__name__)
@@ -542,6 +543,7 @@ def registar_refeicao():
                             unit_order=mi.UNIT_ORDER, unit_labels=mi.UNIT_LABELS,
                             datalist_opcoes=mi.opcoes_datalist(alimentos_custom),
                             hoje_iso=hoje_iso, data_destino=data_destino,
+                            foto_ativa=foto_refeicao.configurado(),
                             voltar_href=(url_for("index") if data_destino == hoje_iso else url_for("dia", data_iso=data_destino)))
 
 
@@ -589,6 +591,63 @@ def pesquisar_alimento():
     if not opcoes:
         return jsonify({"encontrado": False})
     return jsonify({"encontrado": True, "opcoes": opcoes})
+
+
+@app.route("/refeicao/foto", methods=["POST"])
+def refeicao_foto():
+    """Recebe a foto do prato, pede ao Gemini para identificar os alimentos
+    e as gramas (ver foto_refeicao.py) e devolve as linhas para preencher o
+    formulário. Não guarda nada: a pessoa revê e carrega em "Calcular e guardar"."""
+    foto = request.files.get("foto")
+    if not foto:
+        return jsonify({"ok": False, "erro": "Não recebi nenhuma foto."}), 400
+    alimentos_custom = db.get_custom_foods() if db.configured() else []
+    extra = mi.dict_custom(alimentos_custom)
+    peso_unidade = mi.dict_peso_unidade(alimentos_custom)
+    try:
+        resultado = foto_refeicao.analisar(foto.read(), foto.mimetype, mi.opcoes_datalist(alimentos_custom))
+    except foto_refeicao.FotoErro as exc:
+        return jsonify({"ok": False, "erro": str(exc)}), 200
+
+    # nomes que a app conhece tal e qual (tabela, sugestões e os teus alimentos)
+    exatos = {n.strip().lower() for n in mi.opcoes_datalist(alimentos_custom)} | set(extra)
+    itens = []
+    for it in resultado["itens"]:
+        det = food_lookup_detalhe(it["nome"], extra=extra)
+        calc = mi.calcular_item(it["nome"], it["gramas"], "g", extra=extra, peso_unidade=peso_unidade)
+        if det and (det[2] or it["nome"].strip().lower() in exatos):
+            estado = "conhecido"
+        elif det:
+            estado = "parecido"   # ex: "molho de cogumelos" → usa os valores de "cogumelos"
+        else:
+            estado = "novo"
+        itens.append({
+            "nome": it["nome"], "gramas": it["gramas"], "confianca": it["confianca"],
+            "estado": estado, "conhecido": estado == "conhecido",
+            "usa": det[0] if det else None,
+            # kcal: da tabela da app quando existe; senão a estimativa da IA (só para mostrar)
+            "kcal": round(calc["kcal"] if calc else it["por100"]["kcal"] * it["gramas"] / 100),
+            "por100": it["por100"],
+        })
+    return jsonify({"ok": True, "itens": itens, "aviso": resultado["aviso"]})
+
+
+@app.route("/alimentos/novo-rapido", methods=["POST"])
+def criar_alimento_rapido():
+    """Cria um alimento sem recarregar a página (usado pela foto do prato,
+    para não perderes as linhas que já estão preenchidas)."""
+    dados = request.get_json(silent=True) or {}
+    nome = " ".join(str(dados.get("nome") or "").replace("|", "/").replace(";", ",").split())[:60]
+    if not nome:
+        return jsonify({"ok": False, "erro": "Falta o nome."}), 400
+    try:
+        valores = [max(0.0, float(dados.get(k) or 0)) for k in ("kcal", "proteina_g", "hidratos_g", "gordura_g")]
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "erro": "Valores inválidos."}), 400
+    existentes = {f["nome"].strip().lower() for f in (db.get_custom_foods() or [])}
+    if nome.lower() not in existentes:
+        db.add_custom_food(nome, *valores)
+    return jsonify({"ok": True, "nome": nome})
 
 
 @app.route("/alimentos/novo", methods=["POST"])

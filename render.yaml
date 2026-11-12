@@ -17,3 +17,6 @@ services:
       # Chave do endpoint /lembretes/verificar (chamado pelo cron-job.org de 5 em 5 min)
       - key: LEMBRETES_CHAVE
         sync: false
+      # Foto do prato (Gemini): https://aistudio.google.com/apikey
+      - key: GEMINI_API_KEY
+        sync: false

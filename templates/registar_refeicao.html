@@ -13,7 +13,36 @@
 
 {% include "_datalist_alimentos.html" %}
 
-<form method="post" class="card-lg stack">
+{# ===== Foto do prato → preenche as linhas em baixo ===== #}
+<section class="ft card-lg" id="ft">
+  <div class="ft-head">
+    <span class="ft-ico" aria-hidden="true">📷</span>
+    <div class="grow">
+      <b>Tirar foto ao prato</b>
+      <span class="muted">A app preenche os alimentos e as gramas. Tu confirmas antes de guardar.</span>
+    </div>
+  </div>
+  {% if foto_ativa %}
+    <label class="btn btn-primary btn-block ft-btn" for="ft-input">📷 Fotografar prato</label>
+    <input type="file" id="ft-input" accept="image/*" class="sr">
+  {% else %}
+    <p class="ft-off">Ainda não está ligado: falta a chave do Gemini (GEMINI_API_KEY) no Render.</p>
+  {% endif %}
+
+  <div class="ft-estado" id="ft-estado" hidden>
+    <img id="ft-preview" alt="Foto do prato">
+    <span id="ft-msg" class="grow"></span>
+  </div>
+
+  <div class="ft-res" id="ft-res" hidden>
+    <ul id="ft-lista"></ul>
+    <div class="ft-total" id="ft-total"></div>
+    <button type="button" class="btn btn-secondary btn-sm" id="ft-criar-todos" hidden>Criar todos os alimentos novos</button>
+    <p class="ft-nota">👇 Confirma as gramas em baixo e carrega em <b>Calcular e guardar</b>.</p>
+  </div>
+</section>
+
+<form method="post" class="card-lg stack" id="form-refeicao">
   <input type="hidden" name="data" value="{{ data_destino }}">
   <div class="field">
     <label>Refeição</label>
@@ -111,5 +140,152 @@
     });
   }
   atualizarBotoesRemover();
+
+  // ================= Foto do prato =================
+  (function () {
+    var input = document.getElementById('ft-input');
+    if (!input) return;
+    var estado = document.getElementById('ft-estado');
+    var msg = document.getElementById('ft-msg');
+    var preview = document.getElementById('ft-preview');
+    var res = document.getElementById('ft-res');
+    var lista = document.getElementById('ft-lista');
+    var total = document.getElementById('ft-total');
+    var criarTodos = document.getElementById('ft-criar-todos');
+    var btn = document.querySelector('.ft-btn');
+    var LADO_MAX = 1280;
+
+    // reduz a foto no telemóvel (menos dados a enviar e análise mais rápida)
+    function reduzir(ficheiro) {
+      return new Promise(function (ok) {
+        var url = URL.createObjectURL(ficheiro);
+        var img = new Image();
+        img.onload = function () {
+          var esc = Math.min(1, LADO_MAX / Math.max(img.width, img.height));
+          var c = document.createElement('canvas');
+          c.width = Math.round(img.width * esc); c.height = Math.round(img.height * esc);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          c.toBlob(function (b) { URL.revokeObjectURL(url); ok(b || ficheiro); }, 'image/jpeg', 0.82);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); ok(ficheiro); };
+        img.src = url;
+      });
+    }
+
+    function linhas() { return document.querySelectorAll('#itens-refeicao .item-row'); }
+
+    function preencherLinhas(itens) {
+      // tira as linhas vazias; mantém o que já tinhas escrito
+      linhas().forEach(function (l) {
+        if (!l.querySelector('input[name="chave"]').value.trim() && linhas().length > 1) l.remove();
+      });
+      itens.forEach(function (it) {
+        var ultima = linhas()[linhas().length - 1];
+        var alvo = ultima.querySelector('input[name="chave"]').value.trim() ? (novaLinha(), linhas()[linhas().length - 1]) : ultima;
+        alvo.querySelector('input[name="chave"]').value = it.nome;
+        alvo.querySelector('input[name="quantidade"]').value = it.gramas;
+        alvo.querySelector('select[name="unidade"]').value = 'g';
+        alvo.classList.add('ft-preenchida');
+      });
+      atualizarBotoesRemover();
+    }
+
+    function juntarAoDatalist(nome) {
+      var dl = document.getElementById('lista-alimentos');
+      if (!dl) return;
+      var o = document.createElement('option'); o.value = nome; dl.appendChild(o);
+    }
+
+    function criarAlimento(it, li) {
+      var b = li.querySelector('.ft-criar');
+      if (b) { b.disabled = true; b.textContent = 'A criar…'; }
+      return fetch('{{ url_for("criar_alimento_rapido") }}', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: it.nome, kcal: it.por100.kcal, proteina_g: it.por100.proteina_g,
+                               hidratos_g: it.por100.hidratos_g, gordura_g: it.por100.gordura_g })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) throw new Error(d.erro || 'erro');
+        it.conhecido = true;
+        juntarAoDatalist(it.nome);
+        it.estado = 'conhecido';
+        li.classList.remove('is-novo', 'is-perto'); li.classList.add('is-ok');
+        li.querySelector('.ft-li-ico').textContent = '✓';
+        li.querySelector('.ft-extra').innerHTML = '<span class="ft-tag">✓ criado</span>';
+        atualizarCriarTodos();
+      }).catch(function () {
+        if (b) { b.disabled = false; b.textContent = 'Tentar outra vez'; }
+      });
+    }
+
+    var itensAtuais = [];
+    function atualizarCriarTodos() {
+      var novos = itensAtuais.filter(function (i) { return i.estado === 'novo'; });
+      criarTodos.hidden = novos.length < 2;
+    }
+    criarTodos.addEventListener('click', function () {
+      itensAtuais.forEach(function (it, i) { if (it.estado === 'novo') criarAlimento(it, lista.children[i]); });
+    });
+
+    function esc(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    function mostrarResultado(d) {
+      itensAtuais = d.itens;
+      lista.innerHTML = '';
+      var soma = 0;
+      d.itens.forEach(function (it) {
+        soma += it.kcal;
+        var li = document.createElement('li');
+        li.className = it.estado === 'conhecido' ? 'is-ok' : (it.estado === 'parecido' ? 'is-perto' : 'is-novo');
+        var duvida = it.confianca === 'baixa' ? ' <span class="ft-tag ft-duvida">confirma</span>' : '';
+        var valores = it.por100.kcal + ' kcal / 100 g · P ' + it.por100.proteina_g +
+            ' · H ' + it.por100.hidratos_g + ' · G ' + it.por100.gordura_g;
+        var extra = '';
+        if (it.estado === 'novo') {
+          extra = '<span class="ft-novo-txt">Alimento novo · ' + valores + '</span>' +
+            '<button type="button" class="btn btn-secondary btn-sm ft-criar">Criar com estes valores</button>';
+        } else if (it.estado === 'parecido') {
+          extra = '<span class="ft-novo-txt">Vai usar os valores de «' + esc(it.usa) + '». Preferes valores próprios? ' + valores + '</span>' +
+            '<button type="button" class="btn btn-secondary btn-sm ft-criar">Criar «' + esc(it.nome) + '»</button>';
+        }
+        li.innerHTML =
+          '<span class="ft-li-ico" aria-hidden="true">' + (it.estado === 'conhecido' ? '✓' : (it.estado === 'parecido' ? '≈' : '+')) + '</span>' +
+          '<span class="grow"><b>' + esc(it.nome) + '</b> · ' + it.gramas + ' g' + duvida +
+          '<span class="ft-extra">' + extra + '</span></span>' +
+          '<span class="ft-kcal">~' + it.kcal + ' kcal</span>';
+        lista.appendChild(li);
+        var b = li.querySelector('.ft-criar');
+        if (b) b.addEventListener('click', function () { criarAlimento(it, li); });
+      });
+      total.innerHTML = 'Estimativa: <b>~' + Math.round(soma) + ' kcal</b>' +
+        (d.aviso ? '<span class="ft-aviso">' + esc(d.aviso) + '</span>' : '');
+      res.hidden = false;
+      atualizarCriarTodos();
+      preencherLinhas(d.itens);
+    }
+
+    input.addEventListener('change', function () {
+      var f = input.files && input.files[0];
+      if (!f) return;
+      res.hidden = true;
+      estado.hidden = false; estado.classList.remove('is-erro');
+      preview.src = URL.createObjectURL(f);
+      msg.textContent = '🔍 A analisar o prato…';
+      btn.classList.add('is-loading'); btn.textContent = 'A analisar…';
+      reduzir(f).then(function (blob) {
+        var fd = new FormData(); fd.append('foto', blob, 'prato.jpg');
+        return fetch('{{ url_for("refeicao_foto") }}', { method: 'POST', body: fd });
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) throw new Error(d.erro || 'Não foi possível analisar a foto.');
+        msg.textContent = '✅ Encontrei ' + d.itens.length + (d.itens.length === 1 ? ' alimento.' : ' alimentos.');
+        mostrarResultado(d);
+      }).catch(function (e) {
+        estado.classList.add('is-erro');
+        msg.textContent = '⚠️ ' + (e && e.message && e.message !== 'Failed to fetch' ? e.message : 'Sem ligação. Tenta outra vez.');
+      }).then(function () {
+        btn.classList.remove('is-loading'); btn.textContent = '📷 Tirar outra foto';
+        input.value = '';
+      });
+    });
+  })();
 </script>
 {% endblock %}

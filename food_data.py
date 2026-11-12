@@ -1,5 +1,7 @@
 """Tabela local de composição nutricional (por 100g) de alimentos comuns em Portugal.
 Valores aproximados (fonte: tabelas de composição de alimentos genéricas)."""
+import re
+
 
 # nome_chave: (kcal, proteina_g, hidratos_g, gordura_g) por 100g
 FOODS = {
@@ -403,23 +405,49 @@ LATA_G_DEFAULTS = {
 LATA_G_PADRAO = 120  # se o alimento não estiver na lista acima
 
 
+def _palavra_inteira(nome, texto):
+    """'cogumelos' está em 'molho de cogumelos' como palavra; 'mel' não."""
+    # aceita plural simples: "banana" bate com "bananas"
+    return re.search(r"(?<!\w)" + re.escape(nome) + r"(?:s|es)?(?!\w)", texto) is not None
+
+
+def lookup_detalhe(food_name: str, extra: dict = None):
+    """Como lookup, mas diz também que nome da tabela foi usado e se a
+    correspondência foi exata. Devolve (nome_usado, valores, exato) ou None."""
+    key = food_name.strip().lower()
+    if not key:
+        return None
+    if extra and key in extra:
+        return key, extra[key], True
+    if key in FOODS:
+        return key, FOODS[key], True
+    # correspondência parcial: nome da tabela como PALAVRA dentro do que foi
+    # escrito (o mais comprido primeiro: "batata frita caseira" → "batata frita")
+    fontes = [FOODS] + ([extra] if extra else [])
+    for fonte in fontes:
+        candidatos = [n for n in fonte if _palavra_inteira(n, key)]
+        if candidatos:
+            melhor = max(candidatos, key=len)
+            return melhor, fonte[melhor], False
+    # palavra que COMEÇA por um nome da tabela ("pãozinho" → "pão")
+    for fonte in fontes:
+        candidatos = [n for n in fonte if re.search(r"(?<!\w)" + re.escape(n), key)]
+        if candidatos:
+            melhor = max(candidatos, key=len)
+            return melhor, fonte[melhor], False
+    # o que foi escrito é o início/parte de um nome da tabela ("frang" → "frango")
+    for fonte in fontes:
+        for name, vals in fonte.items():
+            if key in name:
+                return name, vals, False
+    return None
+
+
 def lookup(food_name: str, extra: dict = None):
     """extra: dict opcional {nome_em_minusculas: (kcal, proteina_g, hidratos_g, gordura_g)}
     com alimentos personalizados do utilizador, verificados primeiro."""
-    key = food_name.strip().lower()
-    if extra and key in extra:
-        return extra[key]
-    if key in FOODS:
-        return FOODS[key]
-    # tenta correspondência parcial
-    for name, vals in FOODS.items():
-        if name in key or key in name:
-            return vals
-    if extra:
-        for name, vals in extra.items():
-            if name in key or key in name:
-                return vals
-    return None
+    det = lookup_detalhe(food_name, extra=extra)
+    return det[1] if det else None
 
 
 def portion_grams(food_name: str):
