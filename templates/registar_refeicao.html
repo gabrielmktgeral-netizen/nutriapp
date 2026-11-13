@@ -23,8 +23,11 @@
     </div>
   </div>
   {% if foto_ativa %}
-    <label class="btn btn-primary btn-block ft-btn" for="ft-input">📷 Fotografar prato</label>
-    <input type="file" id="ft-input" accept="image/*" class="sr">
+    <div class="ft-acoes">
+      <button type="button" class="btn btn-primary ft-btn" id="ft-abrir">📷 Fotografar prato</button>
+      <label class="btn btn-secondary ft-galeria" for="ft-input" title="Escolher da galeria">🖼️<span class="sr">Escolher da galeria</span></label>
+    </div>
+    <input type="file" id="ft-input" accept="image/*" class="sr" tabindex="-1">
   {% else %}
     <p class="ft-off">Ainda não está ligado: falta a chave do Gemini (GEMINI_API_KEY) no Render.</p>
   {% endif %}
@@ -41,6 +44,21 @@
     <p class="ft-nota">👇 Confirma as gramas em baixo e carrega em <b>Calcular e guardar</b>.</p>
   </div>
 </section>
+
+{% if foto_ativa %}
+{# ===== Câmara dentro da app (ecrã inteiro) ===== #}
+<div class="cam" id="cam" hidden role="dialog" aria-modal="true" aria-label="Câmara">
+  <video id="cam-video" playsinline autoplay muted></video>
+  <div class="cam-guia" aria-hidden="true"><i></i><span>Enquadra o prato inteiro, de cima</span></div>
+  <button type="button" class="cam-fechar" id="cam-fechar" aria-label="Fechar câmara">✕</button>
+  <p class="cam-erro" id="cam-erro" hidden></p>
+  <div class="cam-barra">
+    <label class="cam-lado" for="ft-input" aria-label="Escolher da galeria">🖼️</label>
+    <button type="button" class="cam-disparo" id="cam-disparo" aria-label="Tirar foto"></button>
+    <button type="button" class="cam-lado" id="cam-virar" aria-label="Trocar de câmara">🔄</button>
+  </div>
+</div>
+{% endif %}
 
 <form method="post" class="card-lg stack" id="form-refeicao">
   <input type="hidden" name="data" value="{{ data_destino }}">
@@ -263,9 +281,7 @@
       preencherLinhas(d.itens);
     }
 
-    input.addEventListener('change', function () {
-      var f = input.files && input.files[0];
-      if (!f) return;
+    function analisar(f) {
       res.hidden = true;
       estado.hidden = false; estado.classList.remove('is-erro');
       preview.src = URL.createObjectURL(f);
@@ -284,8 +300,100 @@
       }).then(function () {
         btn.classList.remove('is-loading'); btn.textContent = '📷 Tirar outra foto';
         input.value = '';
+        estado.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
+    }
+
+    // foto escolhida da galeria (botão 🖼️, aqui ou dentro da câmara)
+    input.addEventListener('change', function () {
+      var f = input.files && input.files[0];
+      if (!f) return;
+      fecharCamara();
+      analisar(f);
     });
+
+    // ---------- câmara dentro da app ----------
+    var cam = document.getElementById('cam');
+    var video = document.getElementById('cam-video');
+    var camErro = document.getElementById('cam-erro');
+    var virar = document.getElementById('cam-virar');
+    var disparo = document.getElementById('cam-disparo');
+    var stream = null;
+    var lado = 'environment';   // câmara traseira
+
+    function pararStream() {
+      if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+      video.srcObject = null;
+    }
+
+    function mostrarErroCamara(texto) {
+      camErro.textContent = texto; camErro.hidden = false;
+      disparo.disabled = true;
+    }
+
+    function ligarCamara() {
+      pararStream();
+      camErro.hidden = true; disparo.disabled = true;
+      return navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: lado }, width: { ideal: 1920 }, height: { ideal: 1440 } },
+        audio: false
+      }).then(function (s) {
+        stream = s;
+        video.srcObject = s;
+        return video.play().catch(function () {});
+      }).then(function () {
+        disparo.disabled = false;
+        // só mostra "trocar câmara" se houver mais de uma
+        return navigator.mediaDevices.enumerateDevices().then(function (ds) {
+          virar.hidden = ds.filter(function (d) { return d.kind === 'videoinput'; }).length < 2;
+        }).catch(function () {});
+      }).catch(function (e) {
+        if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+          mostrarErroCamara('Sem autorização para usar a câmara. Permite a câmara nas definições do browser para este site — ou escolhe uma foto da galeria 🖼️.');
+        } else {
+          mostrarErroCamara('Não consegui abrir a câmara. Escolhe uma foto da galeria 🖼️.');
+        }
+      });
+    }
+
+    function abrirCamara() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        input.click();   // browser sem câmara integrada: usa o seletor do sistema
+        return;
+      }
+      cam.hidden = false;
+      document.body.classList.add('cam-aberta');
+      ligarCamara();
+    }
+
+    function fecharCamara() {
+      if (!cam || cam.hidden) return;
+      pararStream();
+      cam.hidden = true;
+      document.body.classList.remove('cam-aberta');
+    }
+
+    function tirarFoto() {
+      if (!stream || !video.videoWidth) return;
+      var esc = Math.min(1, LADO_MAX / Math.max(video.videoWidth, video.videoHeight));
+      var c = document.createElement('canvas');
+      c.width = Math.round(video.videoWidth * esc); c.height = Math.round(video.videoHeight * esc);
+      c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
+      cam.classList.add('is-flash');
+      disparo.disabled = true;
+      c.toBlob(function (b) {
+        setTimeout(function () { cam.classList.remove('is-flash'); fecharCamara(); if (b) analisar(b); }, 180);
+      }, 'image/jpeg', 0.85);
+    }
+
+    document.getElementById('ft-abrir').addEventListener('click', abrirCamara);
+    document.getElementById('cam-fechar').addEventListener('click', fecharCamara);
+    disparo.addEventListener('click', tirarFoto);
+    virar.addEventListener('click', function () { lado = lado === 'environment' ? 'user' : 'environment'; ligarCamara(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fecharCamara(); });
+    // não deixa a câmara ligada se saíres da app/separador
+    document.addEventListener('visibilitychange', function () { if (document.hidden) fecharCamara(); });
+    window.addEventListener('pagehide', fecharCamara);
   })();
 </script>
 {% endblock %}

@@ -13,22 +13,28 @@ Como funciona:
 
 Configuração (variáveis de ambiente no Render):
 * GEMINI_API_KEY  — obrigatória (https://aistudio.google.com/apikey)
-* GEMINI_MODEL    — opcional (por omissão: gemini-2.5-flash)
+* GEMINI_MODEL    — opcional. Por omissão tenta, por esta ordem:
+                    gemini-flash-latest → gemini-3.8-flash → gemini-3.5-flash-lite
+
+Porquê vários modelos: a Google retira modelos com frequência. Desde set/2026
+os modelos 2.5 só respondem a quem já os usava — uma chave nova recebe
+"404 modelo não disponível". Se um modelo falhar (404/5xx), passa ao seguinte.
 
 Notas:
 * No plano grátis do Gemini, a Google pode usar as fotos para melhorar os
   produtos dela. No plano pago, não.
-* O gunicorn corta pedidos que demorem mais de 30 s, por isso o pedido ao
-  Gemini tem um limite de 25 s.
+* O gunicorn.conf.py sobe o limite do servidor para 60 s; aqui usamos no
+  máximo ~50 s no total (somando as tentativas).
 """
 import base64
 import json
 import os
+import time
 
 import requests
 
-MODELO_PADRAO = "gemini-2.5-flash"
-TIMEOUT_S = 25
+MODELOS_PADRAO = ["gemini-flash-latest", "gemini-3.8-flash", "gemini-3.5-flash-lite"]
+TEMPO_TOTAL_S = 50
 MAX_BYTES = 6 * 1024 * 1024  # foto já vem reduzida; isto é só uma rede de segurança
 TIPOS_ACEITES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
 
@@ -91,18 +97,21 @@ Se a foto não for de comida, responde com e_comida=false, itens vazios e um avi
 Se tiveres dúvidas sobre um alimento, marca confianca="baixa" em vez de inventar."""
 
 
-def _pedir_ao_gemini(foto_bytes, mime, nomes_conhecidos):
-    chave = os.environ.get("GEMINI_API_KEY", "")
-    modelo = os.environ.get("GEMINI_MODEL", MODELO_PADRAO).strip() or MODELO_PADRAO
+def _modelos():
+    escolhido = os.environ.get("GEMINI_MODEL", "").strip()
+    return [escolhido] + [m for m in MODELOS_PADRAO if m != escolhido] if escolhido else list(MODELOS_PADRAO)
+
+
+def _corpo(foto_bytes, mime, nomes_conhecidos, modelo):
     config = {
         "temperature": 0.2,
         "responseMimeType": "application/json",
         "responseSchema": _ESQUEMA,
     }
     if modelo.startswith("gemini-2.5"):
-        # resposta mais rápida (sem "pensar" antes) — cabe no limite de 30 s do servidor
+        # só nos 2.5: resposta mais rápida, sem "pensar" antes
         config["thinkingConfig"] = {"thinkingBudget": 0}
-    corpo = {
+    return {
         "contents": [{
             "role": "user",
             "parts": [
@@ -112,32 +121,47 @@ def _pedir_ao_gemini(foto_bytes, mime, nomes_conhecidos):
         }],
         "generationConfig": config,
     }
-    try:
-        r = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent",
-            headers={"x-goog-api-key": chave, "Content-Type": "application/json"},
-            json=corpo, timeout=TIMEOUT_S,
-        )
-    except requests.Timeout:
-        raise FotoErro("A análise demorou demasiado. Tenta outra vez.")
-    except requests.RequestException:
-        raise FotoErro("Não consegui ligar ao serviço de análise. Tenta outra vez.")
 
-    if r.status_code == 429:
-        raise FotoErro("Limite de análises atingido por agora. Tenta daqui a pouco.")
-    if r.status_code in (400, 401, 403):
-        print(f"[foto] Gemini {r.status_code}: {r.text[:300]}", flush=True)
-        raise FotoErro("A chave do Gemini não foi aceite. Confirma GEMINI_API_KEY no Render.")
-    if r.status_code >= 300:
-        print(f"[foto] Gemini {r.status_code}: {r.text[:300]}", flush=True)
-        raise FotoErro("O serviço de análise falhou. Tenta outra vez.")
 
-    try:
-        texto = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        return json.loads(texto)
-    except (KeyError, IndexError, ValueError, TypeError):
-        print(f"[foto] resposta inesperada: {r.text[:300]}", flush=True)
-        raise FotoErro("Não consegui perceber a resposta da análise. Tenta outra foto.")
+def _pedir_ao_gemini(foto_bytes, mime, nomes_conhecidos):
+    chave = os.environ.get("GEMINI_API_KEY", "")
+    limite = time.monotonic() + TEMPO_TOTAL_S
+    ultimo_codigo = None
+    for modelo in _modelos():
+        restante = limite - time.monotonic()
+        if restante < 5:
+            break
+        try:
+            r = requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent",
+                headers={"x-goog-api-key": chave, "Content-Type": "application/json"},
+                json=_corpo(foto_bytes, mime, nomes_conhecidos, modelo), timeout=restante,
+            )
+        except requests.Timeout:
+            raise FotoErro("A análise demorou demasiado. Tenta outra vez.")
+        except requests.RequestException:
+            raise FotoErro("Não consegui ligar ao serviço de análise. Tenta outra vez.")
+
+        if r.status_code == 200:
+            try:
+                texto = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+                return json.loads(texto)
+            except (KeyError, IndexError, ValueError, TypeError):
+                print(f"[foto] {modelo}: resposta inesperada: {r.text[:300]}", flush=True)
+                raise FotoErro("Não consegui perceber a resposta da análise. Tenta outra foto.")
+
+        ultimo_codigo = r.status_code
+        print(f"[foto] {modelo} → {r.status_code}: {r.text[:300]}", flush=True)
+        corpo_erro = r.text.lower()
+        if r.status_code in (401, 403) or "api key" in corpo_erro or "api_key" in corpo_erro:
+            raise FotoErro(f"A chave do Gemini não foi aceite (erro {r.status_code}). Confirma GEMINI_API_KEY no Render.")
+        if r.status_code == 429:
+            raise FotoErro("Limite de análises do Gemini atingido por agora. Tenta daqui a pouco.")
+        # 404 (modelo retirado), 400 (modelo não aceita uma opção) ou 5xx (sobrecarga):
+        # tenta o modelo seguinte
+        continue
+
+    raise FotoErro(f"O serviço de análise falhou (erro {ultimo_codigo or 'tempo'}). Tenta outra vez.")
 
 
 def _num(v, minimo=0.0, maximo=None):

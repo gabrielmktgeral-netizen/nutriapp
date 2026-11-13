@@ -131,4 +131,4 @@ Solução: um serviço grátis chama a app de 5 em 5 min (acorda-a e envia os av
 * O Gemini identifica os alimentos e as gramas; a app preenche as linhas.
 * Kcal/macros vêm da tabela da app. Alimentos novos podem ser criados com os valores propostos.
 * Configuração: variável `GEMINI_API_KEY` no Render (chave grátis em https://aistudio.google.com/apikey).
-* Opcional: `GEMINI_MODEL` (por omissão `gemini-2.5-flash`).
+* Opcional: `GEMINI_MODEL`. Por omissão tenta `gemini-flash-latest` → `gemini-3.8-flash` → `gemini-3.5-flash-lite`.
